@@ -1,23 +1,35 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import AnimateBackground from "./components/AnimateBackground";
+import LoginForm from "./components/LoginForm";
+import ChatBoard from "./components/ChatBoard";
+import { Route, Routes } from "react-router-dom";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="h-screen w-screen relative bg-black">
+      {/* <div className="absolute inset-0 overflow-hidden">
+  <div className="absolute w-72 h-72 bg-green-500/20 rounded-full blur-3xl top-10 left-10 animate-float" />
+  <div className="absolute w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl bottom-20 right-10 animate-float-delayed" />
+</div>
+<div className="
+  absolute w-96 h-96 
+  bg-green-500/25 
+  rounded-full 
+  blur-3xl 
+  animate-float 
+  animate-glow 
+  animate-rotate-slow
+"/> */}
+
+
+
+
+      <Routes>
+        <Route path="/" element={<><AnimateBackground />
+      <LoginForm /></>}/>
+      <Route path="chatconvo" element={<ChatBoard/>}/>
+      </Routes>
+      
     </div>
   );
 }

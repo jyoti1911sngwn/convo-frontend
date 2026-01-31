@@ -7,6 +7,20 @@
   pointer-events: none;
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-40px); }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 10s ease-in-out infinite;
+}
+
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
@@ -36,3 +50,89 @@
     transform: rotate(360deg);
   }
 }
+
+@keyframes blurPulse {
+  0%, 100% {
+    filter: blur(90px);
+  }
+  50% {
+    filter: blur(120px);
+  }
+}
+
+.animate-blur {
+  animation: blurPulse 8s ease-in-out infinite;
+}
+
+@keyframes slowRotate {
+  from {
+    transform: rotate(0deg) translate(0, 0);
+  }
+  to {
+    transform: rotate(360deg) translate(0, 0);
+  }
+}
+
+.animate-rotate-slow {
+  animation: slowRotate 40s linear infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-glow {
+  animation: glowPulse 6s ease-in-out infinite;
+}
+
+@keyframes floatDrift {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(40px, -40px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.animate-float {
+  animation: floatDrift 10s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: floatDrift 14s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.6;
+  }
+}
+
+.particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.5); /* green-500 */
+  animation: particleFloat 12s ease-in-out infinite;
+}
+
+.particle-slow {
+  animation-duration: 18s;
+}
+
+.particle-fast {
+  animation-duration: 9s;
+}
+
