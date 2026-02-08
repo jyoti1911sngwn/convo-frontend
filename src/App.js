@@ -3,6 +3,7 @@ import AnimateBackground from "./components/AnimateBackground";
 import LoginForm from "./components/LoginForm";
 import ChatBoard from "./components/ChatBoard";
 import { Route, Routes } from "react-router-dom";
+import SignupForm from "./components/SignupForm";
 
 function App() {
   return (
@@ -21,15 +22,27 @@ function App() {
   animate-rotate-slow
 "/> */}
 
-
-
-
       <Routes>
-        <Route path="/" element={<><AnimateBackground />
-      <LoginForm /></>}/>
-      <Route path="chatconvo" element={<ChatBoard/>}/>
+        <Route
+          path="/login"
+          element={
+            <>
+              <AnimateBackground />
+              <LoginForm />
+            </>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <>
+              <AnimateBackground />
+              <SignupForm />
+            </>
+          }
+        />
+        <Route path="/chatconvo" element={<ChatBoard />} />
       </Routes>
-      
     </div>
   );
 }

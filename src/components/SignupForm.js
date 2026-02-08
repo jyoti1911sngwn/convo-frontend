@@ -1,30 +1,36 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const LoginForm = () => {
+const SignupForm = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const login = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-      }),
-    });
-    
-    const res= await login.json();
-    localStorage.setItem("userId" , res.id);
-    localStorage.setItem("userName" , res.name);
-    localStorage.setItem("description", res.description)
-    if (res.compare) {
-      navigate("/chatconvo");
-    } else {
-      setMessage("error occured , try again")
+
+    try {
+      const signup = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: name,
+          email,
+          password,
+        }),
+      });
+
+      const res = await signup.json();
+
+      if (signup.ok) {
+        navigate("/chatconvo"); // or "/login"
+      } else {
+        setMessage(res.message || "Signup failed, try again");
+      }
+    } catch (error) {
+      setMessage("Server error, please try later");
     }
   };
 
@@ -43,21 +49,36 @@ const LoginForm = () => {
         "
       >
         <h1 className="text-3xl font-semibold text-center tracking-wide text-green-400">
-          Welcome to <span className="font-extrabold">CONVO</span>
+          Join <span className="font-extrabold">CONVO</span>
         </h1>
 
         <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="
+              w-full px-4 py-3 rounded-lg
+              bg-gray-900 text-white
+              placeholder-gray-400
+              border border-gray-700
+              focus:outline-none
+              focus:border-green-400
+              focus:ring-2 focus:ring-green-400/40
+              transition
+            "
+            required
+          />
+
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="
-              w-full
-              px-4 py-3
-              rounded-lg
-              bg-gray-900
-              text-white
+              w-full px-4 py-3 rounded-lg
+              bg-gray-900 text-white
               placeholder-gray-400
               border border-gray-700
               focus:outline-none
@@ -74,11 +95,8 @@ const LoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="
-              w-full
-              px-4 py-3
-              rounded-lg
-              bg-gray-900
-              text-white
+              w-full px-4 py-3 rounded-lg
+              bg-gray-900 text-white
               placeholder-gray-400
               border border-gray-700
               focus:outline-none
@@ -93,27 +111,27 @@ const LoginForm = () => {
         <button
           type="submit"
           className="
-            w-full
-            py-3
-            rounded-lg
-            font-semibold
-            text-black
+            w-full py-3 rounded-lg
+            font-semibold text-black
             bg-green-400
             hover:bg-green-500
             active:scale-95
             transition-all
             shadow-[0_0_20px_rgba(0,255,128,0.4)]
           "
-          // onClick={() => navigate("/chatconvo")}
         >
-          Login
+          Sign Up
         </button>
-        {message && <div style={{color: "red"}}>{message}</div>}
+
+        {message && <div className="text-red-500 text-center">{message}</div>}
 
         <p className="text-center text-sm text-gray-400">
-          Don’t have an account?{" "}
-          <span className="text-green-400 hover:underline cursor-pointer" onClick={() => navigate("/chatconvo")}>
-            Sign up
+          Already have an account?{" "}
+          <span
+            className="text-green-400 hover:underline cursor-pointer"
+            onClick={() => navigate("/login")}
+          >
+            Login
           </span>
         </p>
       </form>
@@ -121,4 +139,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default SignupForm;
