@@ -28,6 +28,7 @@ const ChatBoard = () => {
   const getReciepient = async () => {
     const res = await fetch(`http://localhost:5000/api/users/getAllUser`);
     const data = await res.json();
+    console.log(data, 'data000000')
     setRecpient(data);
   };
   const handleSignout = () => {
@@ -165,6 +166,7 @@ const ChatBoard = () => {
       <aside className="hidden md:flex w-[320px] bg-gray-950 border-r border-green-500/20 flex-col">
         <div className="px-4 py-4 border-b border-green-500/20">
           <h1 className="text-green-400 text-xl font-bold">CONVO</h1>
+          <p className="text-xs text-gray-400 truncate">Hi! Welcome to CONVO 💚</p>
           <input
             placeholder="Search or start new chat"
             className="mt-3 w-full px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -193,7 +195,10 @@ const ChatBoard = () => {
                   <div>
                     <p className="text-white font-medium">{user.username}</p>
                     <p className="text-xs text-gray-400 truncate">
-                      Hi! Welcome to CONVO 💚
+                     {user.message ? user.message.length > 30
+                        ? user.message.slice(0, 30) + "..."
+                        : user.message
+                      : "Hi! Welcome to CONVO 💚"}
                     </p>
                   </div>
                 </div>
