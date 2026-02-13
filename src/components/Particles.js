@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 
 const Particles = () => {
   const mesh = useRef();
