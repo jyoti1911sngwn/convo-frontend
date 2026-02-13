@@ -49,11 +49,14 @@ const ChatBoard = () => {
   };
   const filteredRecpient = recpient.filter((u) => u.username.includes(debounce));
   useEffect(() => {
-    {
-      newReciepient && getMessages();
-    }
-    getReciepient();
-  }, [newReciepient]);
+  if (newReciepient) {
+    getMessages();
+  }
+  getReciepient();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [newReciepient]);
+
+
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -373,7 +376,7 @@ const ChatBoard = () => {
                 alt=""
               />
             )}
-            
+
             <input
               type="file"
               accept="image/*"
