@@ -10,7 +10,7 @@ const ChatBoard = () => {
   // const socket = io("http://localhost:5000");
   const socketRef = useRef(null);
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
+    socketRef.current = io("https://convo-backend-6nfw.onrender.com");
 
     return () => {
       socketRef.current.disconnect();
@@ -26,7 +26,7 @@ const ChatBoard = () => {
   const [recpient, setRecpient] = useState([]);
   const description = localStorage.getItem("description");
   const getReciepient = async () => {
-    const res = await fetch(`http://localhost:5000/api/users/getAllUser`);
+    const res = await fetch(`https://convo-backend-6nfw.onrender.com/api/users/getAllUser`);
     const data = await res.json();
     console.log(data, 'data000000')
     setRecpient(data);
@@ -37,7 +37,7 @@ const ChatBoard = () => {
   };
   const getMessages = async () => {
     const res = await fetch(
-      `http://localhost:5000/api/messages/getMessages/${senderId}/${newReciepient}`,
+      `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${newReciepient}`,
     );
     const data = await res.json();
     const formattedMessages = data.map((msg) => ({
@@ -76,7 +76,7 @@ const ChatBoard = () => {
 
     socketRef.current.emit("sendMessage", messagePayload);
 
-    await fetch(`http://localhost:5000/api/messages/createMessage`, {
+    await fetch(`https://convo-backend-6nfw.onrender.com/api/messages/createMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(messagePayload),
@@ -124,7 +124,7 @@ const ChatBoard = () => {
       formData.append("image", uploadImage); // ← actual File
       formData.append("userId", senderId);
 
-      await fetch("http://localhost:5000/api/images/uploadImage", {
+      await fetch("https://convo-backend-6nfw.onrender.com/api/images/uploadImage", {
         method: "POST",
         body: formData, // ← important: no Content-Type header
       });
@@ -145,7 +145,7 @@ const ChatBoard = () => {
     const myImg = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/images/getImage/${senderId}`,
+          `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
         );
         if (!res.ok) return;
 
