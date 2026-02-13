@@ -21,7 +21,7 @@ const LoginForm = () => {
     localStorage.setItem("userId" , res.id);
     localStorage.setItem("userName" , res.name);
     localStorage.setItem("description", res.description)
-    if (res.compare) {
+    if (res.id) {
       navigate("/chatconvo");
     } else {
       setMessage("error occured , try again")
