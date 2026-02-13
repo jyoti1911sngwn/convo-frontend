@@ -373,6 +373,7 @@ const ChatBoard = () => {
                 alt=""
               />
             )}
+            
             <input
               type="file"
               accept="image/*"
