@@ -245,6 +245,7 @@ const ChatBoard = () => {
                 <img
                   src={selectedUser.image}
                   className="h-10 w-10 rounded-full"
+                  alt=""
                 />
               ) : (
                 <span>{selectedUser.username.slice(0, 1).toUpperCase()}</span>
@@ -369,6 +370,7 @@ const ChatBoard = () => {
               <img
                 src={uploadImage ? URL.createObjectURL(uploadImage) : ""}
                 className="w-full h-40 object-cover rounded-lg mb-4"
+                alt=""
               />
             )}
             <input
