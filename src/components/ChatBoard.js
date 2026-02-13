@@ -153,8 +153,8 @@ const ChatBoard = () => {
         if (!res.ok) return;
 
         const data = await res.json();
-        if (data.imageBase64) {
-          setYourImage(data.imageBase64);
+        if (data.imageUrl) {
+          setYourImage(data.imageUrl);
         }
       } catch (err) {
         console.error(err);
