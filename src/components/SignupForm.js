@@ -24,7 +24,7 @@ const SignupForm = () => {
 
       const res = await signup.json();
 
-      if (signup.ok) {
+      if (signup.id) {
         navigate("/chatconvo"); // or "/login"
       } else {
         setMessage(res.message || "Signup failed, try again");
