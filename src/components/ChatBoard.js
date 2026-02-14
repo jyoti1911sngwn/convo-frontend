@@ -445,7 +445,7 @@ const ChatBoard = () => {
               bg-gray-950 border-t border-green-900/60 px-4 py-4 transition-all duration-200
               ${isMobile ? "fixed bottom-0 left-0 right-0 z-20" : ""}
             `}
-            style={isMobile ? { paddingBottom: `${keyboardHeight + 16}px` } : {}}
+            // style={isMobile ? { paddingBottom: `${keyboardHeight + 16}px` } : {}}
           >
             {selectedRecipientId && selectedRecipientId !== senderId && (
               <div className="flex items-center gap-3 max-w-5xl mx-auto">
