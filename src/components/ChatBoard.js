@@ -477,6 +477,7 @@ const ChatBoard = () => {
               </div>
             )}
 
+            <label className="block mb-2 text-sm text-gray-400">Select an image</label>
             <input
               type="file"
               accept="image/*"
