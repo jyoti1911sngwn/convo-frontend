@@ -23,7 +23,9 @@ const SignupForm = () => {
       });
 
       const res = await signup.json();
-
+    localStorage.setItem("userId" , res.id);
+    localStorage.setItem("userName" , res.name);
+    localStorage.setItem("description", res.description)
       if (signup.id) {
         navigate("/chatconvo"); // or "/login"
       } else {
