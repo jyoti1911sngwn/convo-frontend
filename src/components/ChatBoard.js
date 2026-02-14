@@ -38,7 +38,9 @@ const ChatBoard = () => {
   // ─── Data Fetching ────────────────────────────────────────────
   const fetchAllUsers = useCallback(async () => {
     try {
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
+      );
       if (!res.ok) throw new Error("Failed to load users");
       setRecipients((await res.json()) || []);
     } catch (err) {
@@ -50,7 +52,7 @@ const ChatBoard = () => {
     if (!selectedRecipientId || !senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
       );
       if (!res.ok) throw new Error("Messages fetch failed");
       const data = await res.json();
@@ -59,7 +61,7 @@ const ChatBoard = () => {
           id: msg.id,
           text: msg.message,
           sender: msg.sender_id === senderId ? "me" : "other",
-        }))
+        })),
       );
     } catch (err) {
       console.error("Messages fetch error:", err);
@@ -69,7 +71,9 @@ const ChatBoard = () => {
   const fetchMyProfileImage = useCallback(async () => {
     if (!senderId) return;
     try {
-      const res = await fetch(`https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`);
+      const res = await fetch(
+        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
+      );
       if (res.status === 404 || !res.ok) return setYourImage("");
       const { imageUrl } = await res.json();
       setYourImage(imageUrl || "");
@@ -99,7 +103,11 @@ const ChatBoard = () => {
 
   // Auto-select first user on desktop/large screens when list loads
   useEffect(() => {
-    if (recipients.length > 0 && !selectedRecipientId && window.innerWidth >= 768) {
+    if (
+      recipients.length > 0 &&
+      !selectedRecipientId &&
+      window.innerWidth >= 768
+    ) {
       setSelectedRecipientId(recipients[0].id);
       setShowMobileUserList(false);
     }
@@ -111,12 +119,14 @@ const ChatBoard = () => {
 
     const onReceive = (msg) => {
       if (msg.senderId === senderId) {
-  setIsDelivered(true);
-  return;
-}
+        setIsDelivered(true);
+        return;
+      }
 
-
-      if (msg.senderId === selectedRecipientId || msg.recipientId === selectedRecipientId) {
+      if (
+        msg.senderId === selectedRecipientId ||
+        msg.recipientId === selectedRecipientId
+      ) {
         setMessages((prev) => [
           ...prev,
           {
@@ -139,7 +149,8 @@ const ChatBoard = () => {
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !selectedRecipientId || selectedRecipientId === senderId) return;
+    if (!text || !selectedRecipientId || selectedRecipientId === senderId)
+      return;
 
     const optimisticId = Date.now();
     const optimisticMsg = { id: optimisticId, text, sender: "me" };
@@ -147,15 +158,22 @@ const ChatBoard = () => {
     setMessages((prev) => [...prev, optimisticMsg]);
     setInput("");
 
-    const payload = { senderId, recipientId: selectedRecipientId, messageText: text };
+    const payload = {
+      senderId,
+      recipientId: selectedRecipientId,
+      messageText: text,
+    };
     socketRef.current?.emit("sendMessage", payload);
 
     try {
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/messages/createMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
 
       if (!res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
@@ -164,9 +182,7 @@ const ChatBoard = () => {
 
       const saved = await res.json();
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === optimisticId ? { ...m, id: saved.id } : m
-        )
+        prev.map((m) => (m.id === optimisticId ? { ...m, id: saved.id } : m)),
       );
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
@@ -182,7 +198,7 @@ const ChatBoard = () => {
 
   // ─── Derived ──────────────────────────────────────────────────
   const filteredRecipients = recipients.filter((u) =>
-    u.username.toLowerCase().includes(debouncedSearch)
+    u.username.toLowerCase().includes(debouncedSearch),
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
@@ -207,7 +223,11 @@ const ChatBoard = () => {
             <>
               <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/60 flex-shrink-0">
                 {activeUser.image ? (
-                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={activeUser.image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full bg-green-800/80 flex items-center justify-center text-white font-bold text-lg">
                     {activeUser.username?.[0]?.toUpperCase()}
@@ -228,7 +248,11 @@ const ChatBoard = () => {
           className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/60 cursor-pointer flex-shrink-0"
         >
           {yourImage ? (
-            <img src={yourImage} alt="You" className="h-full w-full object-cover" />
+            <img
+              src={yourImage}
+              alt="You"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="h-full w-full bg-green-800/80 flex items-center justify-center text-white font-bold text-lg">
               {userName?.[0]?.toUpperCase() || "?"}
@@ -248,7 +272,9 @@ const ChatBoard = () => {
       >
         {/* Mobile header inside drawer */}
         <div className="md:hidden p-4 border-b border-green-900/50 flex justify-between items-center">
-          <h1 className="text-green-400 text-2xl font-bold tracking-tight">CONVO</h1>
+          <h1 className="text-green-400 text-2xl font-bold tracking-tight">
+            CONVO
+          </h1>
           <button
             onClick={() => setShowMobileUserList(false)}
             className="text-3xl text-gray-300 hover:text-white"
@@ -287,7 +313,11 @@ const ChatBoard = () => {
                   }}
                 >
                   {user.image ? (
-                    <img src={user.image} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={user.image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-green-800/70 flex items-center justify-center text-white font-bold text-lg">
                       {user.username?.slice(0, 2).toUpperCase()}
@@ -295,7 +325,9 @@ const ChatBoard = () => {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{user.username}</p>
+                  <p className="text-white font-medium truncate">
+                    {user.username}
+                  </p>
                   <p className="text-xs text-gray-400 truncate mt-0.5">
                     {user.message || "Start a conversation"}
                   </p>
@@ -334,7 +366,11 @@ const ChatBoard = () => {
             <>
               <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-green-600/60 flex-shrink-0">
                 {activeUser.image ? (
-                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={activeUser.image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold">
                     {activeUser.username?.[0]?.toUpperCase()}
@@ -342,7 +378,9 @@ const ChatBoard = () => {
                 )}
               </div>
               <div>
-                <h2 className="text-green-200 font-semibold">{activeUser.username}</h2>
+                <h2 className="text-green-200 font-semibold">
+                  {activeUser.username}
+                </h2>
                 <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
                   <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                   Online
@@ -362,12 +400,18 @@ const ChatBoard = () => {
           {!selectedRecipientId ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center px-6">
               <div className="text-6xl mb-6">💬</div>
-              <h3 className="text-xl font-medium text-gray-300 mb-3">Welcome to CONVO</h3>
-              <p className="max-w-md">Select a user from the list to start chatting</p>
+              <h3 className="text-xl font-medium text-gray-300 mb-3">
+                Welcome to CONVO
+              </h3>
+              <p className="max-w-md">
+                Select a user from the list to start chatting
+              </p>
             </div>
           ) : messages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-500 text-center">
-              No messages yet.<br />Say hello! 👋
+              No messages yet.
+              <br />
+              Say hello! 👋
             </div>
           ) : (
             messages.map((msg) => (
@@ -379,14 +423,18 @@ const ChatBoard = () => {
                   className={`
                     max-w-[82%] sm:max-w-[75%] md:max-w-[68%] lg:max-w-[60%]
                     px-4 py-2.5 rounded-2xl text-[15px] sm:text-base leading-relaxed shadow-sm
-                    ${msg.sender === "me"
-                      ? "bg-green-600 text-black rounded-br-none"
-                      : "bg-gray-800 text-white rounded-bl-none"}
+                    ${
+                      msg.sender === "me"
+                        ? "bg-green-600 text-black rounded-br-none"
+                        : "bg-gray-800 text-white rounded-bl-none"
+                    }
                   `}
                 >
                   {msg.text}
                   {msg.sender === "me" && isDelivered && (
-                    <span className="text-xs text-gray-300/80 ml-2 align-bottom">✓</span>
+                    <span className="text-xs text-gray-300/80 ml-2 align-bottom">
+                      ✓
+                    </span>
                   )}
                 </div>
               </div>
@@ -428,7 +476,9 @@ const ChatBoard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 w-full max-w-md border border-green-900/40 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-green-400 text-xl font-semibold">Update Profile Picture</h2>
+              <h2 className="text-green-400 text-xl font-semibold">
+                Update Profile Picture
+              </h2>
               <button
                 onClick={() => {
                   setShowImageUpload(false);
@@ -458,7 +508,9 @@ const ChatBoard = () => {
             />
 
             <button
-              onClick={() => {/* upload logic here */}}
+              onClick={() => {
+                /* upload logic here */
+              }}
               disabled={!imageToUpload}
               className="mt-6 w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:bg-green-900/50 disabled:text-gray-400 text-black font-semibold rounded-xl transition-colors"
             >
