@@ -6,6 +6,7 @@ import { Route, Routes } from "react-router-dom";
 import SignupForm from "./components/SignupForm";
 
 function App() {
+  const isLoggedIn = localStorage.getItem("userId") !== null;
   return (
     <div className="h-screen w-screen relative bg-black">
       {/* <div className="absolute inset-0 overflow-hidden">
@@ -21,7 +22,6 @@ function App() {
   animate-glow 
   animate-rotate-slow
 "/> */}
-
       <Routes>
         <Route
           path="/login"
@@ -41,7 +41,7 @@ function App() {
             </>
           }
         />
-        <Route path="/chatconvo" element={<ChatBoard />} />
+        {isLoggedIn && <Route path="/chatconvo" element={<ChatBoard />} />}
       </Routes>
     </div>
   );
