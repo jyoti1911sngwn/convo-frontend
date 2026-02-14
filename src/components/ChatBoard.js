@@ -24,7 +24,7 @@ const ChatBoard = () => {
 
   const senderId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "User";
-  const userDescription = localStorage.getItem("description") || "";
+  // const userDescription = localStorage.getItem("description") || "";
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
