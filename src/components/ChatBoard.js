@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
 
 const ChatBoard = () => {
@@ -38,7 +38,9 @@ const ChatBoard = () => {
   // Load all users
   const loadUsers = async () => {
     try {
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
+      );
       if (!res.ok) throw new Error("Failed to load users");
       const data = await res.json();
       setRecipients(data || []);
@@ -48,11 +50,11 @@ const ChatBoard = () => {
   };
 
   // Load messages for selected conversation
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!selectedRecipientId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
       );
       if (!res.ok) throw new Error("Failed to load messages");
       const data = await res.json();
@@ -65,14 +67,14 @@ const ChatBoard = () => {
     } catch (err) {
       console.error("Error loading messages:", err);
     }
-  };
+  }, [senderId, selectedRecipientId]);
 
   // Load your own profile picture
-  const loadMyProfileImage = async () => {
+  const loadMyProfileImage = useCallback(async () => {
     if (!senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`
+        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
       );
       if (res.status === 404 || !res.ok) {
         setYourImage("");
@@ -86,7 +88,7 @@ const ChatBoard = () => {
       console.error("Failed to load profile image:", err);
       setYourImage("");
     }
-  };
+  }, [senderId]);
 
   // Debounce search input
   useEffect(() => {
@@ -96,18 +98,13 @@ const ChatBoard = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Initial data loading
   useEffect(() => {
-    loadUsers();
-    loadMyProfileImage();
-  }, [senderId]);
+    if (selectedRecipientId) loadMessages();
+  }, [selectedRecipientId, loadMessages]);
 
-  // Reload messages when recipient changes
   useEffect(() => {
-    if (selectedRecipientId) {
-      loadMessages();
-    }
-  }, [selectedRecipientId]);
+    loadMyProfileImage();
+  }, [loadMyProfileImage]);
 
   // Socket message listener
   useEffect(() => {
@@ -143,7 +140,11 @@ const ChatBoard = () => {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !selectedRecipientId || selectedRecipientId === senderId) {
+    if (
+      !input.trim() ||
+      !selectedRecipientId ||
+      selectedRecipientId === senderId
+    ) {
       alert("Please select a valid recipient and type a message.");
       return;
     }
@@ -167,11 +168,14 @@ const ChatBoard = () => {
 
     // Save to DB
     try {
-      await fetch("https://convo-backend-6nfw.onrender.com/api/messages/createMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
     } catch (err) {
       console.error("Failed to save message:", err);
     }
@@ -185,10 +189,13 @@ const ChatBoard = () => {
       formData.append("image", uploadImage);
       formData.append("userId", senderId);
 
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/images/uploadImage", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/images/uploadImage",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!res.ok) {
         const errData = await res.json();
@@ -211,7 +218,7 @@ const ChatBoard = () => {
   };
 
   const filteredRecipients = recipients.filter((u) =>
-    u.username.toLowerCase().includes(debouncedSearch)
+    u.username.toLowerCase().includes(debouncedSearch),
   );
 
   const selectedUser = recipients.find((u) => u.id === selectedRecipientId);
@@ -253,7 +260,9 @@ const ChatBoard = () => {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{user.username}</p>
+                <p className="text-white font-medium truncate">
+                  {user.username}
+                </p>
                 <p className="text-xs text-gray-400 truncate">
                   {user.message
                     ? user.message.length > 32
@@ -364,7 +373,9 @@ const ChatBoard = () => {
             <p className="text-gray-300">Welcome back</p>
             <h1 className="text-green-400 text-3xl font-bold mt-1">{name}</h1>
             {description && (
-              <p className="text-gray-400 text-sm mt-3 italic">~ {description}</p>
+              <p className="text-gray-400 text-sm mt-3 italic">
+                ~ {description}
+              </p>
             )}
           </div>
         </div>
@@ -384,7 +395,9 @@ const ChatBoard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-gray-900 rounded-2xl p-7 w-full max-w-sm mx-4 shadow-2xl border border-green-900/30">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
+              <h2 className="text-green-400 text-xl font-semibold">
+                Change Profile Picture
+              </h2>
               <button
                 onClick={() => {
                   setImageUploadPop(false);
