@@ -99,12 +99,17 @@ const ChatBoard = () => {
   }, [search]);
 
   useEffect(() => {
-    if (selectedRecipientId) loadMessages();
+    if (selectedRecipientId) {
+      loadMessages();
+    }
   }, [selectedRecipientId, loadMessages]);
 
   useEffect(() => {
-    loadMyProfileImage();
-  }, [loadMyProfileImage]);
+    if (senderId) {
+      loadUsers();
+      loadMyProfileImage();
+    }
+  }, [senderId, loadUsers, loadMyProfileImage]);
 
   // Socket message listener
   useEffect(() => {
