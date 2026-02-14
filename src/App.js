@@ -40,9 +40,7 @@ function App() {
           path="/chatconvo"
           element={<ChatBoard />}
         />
-
-        {/* Catch-all → redirect to login or chat */}
-        <Route path="*" element={<Navigate to={isLoggedIn ? "/chatconvo" : "/login"} replace />} />
+        
       </Routes>
     </div>
   );
