@@ -14,7 +14,7 @@ const ChatBoard = () => {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [imageToUpload, setImageToUpload] = useState(null);
   const [largeProfileImg, setLargeProfileImg] = useState(null);
-  const [uploadStatus, setUploadStatus] = useState(""); // success/error message
+  const [uploadStatus, setUploadStatus] = useState("");
 
   const [showMobileUserList, setShowMobileUserList] = useState(true);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -22,14 +22,14 @@ const ChatBoard = () => {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const inputContainerRef = useRef(null);
 
   const senderId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "User";
-  const userDescription = localStorage.getItem("description") || "";
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
-  // Socket connection
+  // ─── Socket Connection ────────────────────────────────────────
   useEffect(() => {
     socketRef.current = io("https://convo-backend-6nfw.onrender.com");
     return () => socketRef.current?.disconnect();
@@ -84,7 +84,7 @@ const ChatBoard = () => {
     }
   }, [senderId]);
 
-  // ─── Upload Function ──────────────────────────────────────────
+  // ─── Image Upload Handler ─────────────────────────────────────
   const handleUpload = async () => {
     if (!imageToUpload || !senderId) return;
 
@@ -100,7 +100,6 @@ const ChatBoard = () => {
         {
           method: "POST",
           body: formData,
-          // Note: Do NOT set Content-Type manually — browser sets it with boundary for FormData
         }
       );
 
@@ -112,7 +111,6 @@ const ChatBoard = () => {
       const result = await res.json();
       console.log("Upload success:", result);
 
-      // Refresh profile image
       await fetchMyProfileImage();
 
       setUploadStatus("Profile picture updated successfully!");
@@ -120,8 +118,7 @@ const ChatBoard = () => {
         setShowImageUpload(false);
         setImageToUpload(null);
         setUploadStatus("");
-      }, 1800);
-
+      }, 2000);
     } catch (err) {
       console.error("Upload error:", err);
       setUploadStatus("Upload failed: " + (err.message || "Unknown error"));
@@ -147,7 +144,7 @@ const ChatBoard = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Auto-select first user on larger screens
+  // Auto-select first user on desktop
   useEffect(() => {
     if (recipients.length > 0 && !selectedRecipientId && !isMobile) {
       setSelectedRecipientId(recipients[0].id);
@@ -155,7 +152,7 @@ const ChatBoard = () => {
     }
   }, [recipients, selectedRecipientId, isMobile]);
 
-  // Real-time message receiving
+  // Real-time messages
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -186,21 +183,36 @@ const ChatBoard = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Keyboard handling for mobile
+  // Improved mobile keyboard handling
   useEffect(() => {
     if (!isMobile) return;
 
     const updateKeyboard = () => {
-      const visualHeight = window.visualViewport?.height || window.innerHeight;
-      setKeyboardHeight(window.innerHeight - visualHeight);
+      if (!window.visualViewport) return;
+      const visualHeight = window.visualViewport.height;
+      const diff = window.innerHeight - visualHeight;
+
+      // Only apply when keyboard is likely visible
+      if (diff > 120) {
+        setKeyboardHeight(diff);
+        setTimeout(() => {
+          inputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
+        }, 100);
+      } else {
+        setKeyboardHeight(0);
+      }
     };
 
-    window.visualViewport?.addEventListener("resize", updateKeyboard);
+    window.visualViewport.addEventListener("resize", updateKeyboard);
+    window.visualViewport.addEventListener("scroll", updateKeyboard);
     window.addEventListener("resize", updateKeyboard);
+
+    // Initial check
     updateKeyboard();
 
     return () => {
-      window.visualViewport?.removeEventListener("resize", updateKeyboard);
+      window.visualViewport.removeEventListener("resize", updateKeyboard);
+      window.visualViewport.removeEventListener("scroll", updateKeyboard);
       window.removeEventListener("resize", updateKeyboard);
     };
   }, [isMobile]);
@@ -246,13 +258,134 @@ const ChatBoard = () => {
     if (isMobile) setShowMobileUserList(false);
   };
 
-  // ─── Render ───────────────────────────────────────────────────
+  // ─── Filtered & Active ────────────────────────────────────────
   const filteredRecipients = recipients.filter((u) =>
     u.username.toLowerCase().includes(debouncedSearch)
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
 
+  // ─── Render Helpers ───────────────────────────────────────────
+  const renderMessageInput = () => {
+    if (!selectedRecipientId || selectedRecipientId === senderId) return null;
+
+    return (
+      <div
+        ref={inputContainerRef}
+        className={`
+          bg-gray-950 border-t border-green-900/60 px-4 py-4
+          ${isMobile ? "fixed left-0 right-0 z-20" : "relative"}
+        `}
+        style={
+          isMobile
+            ? {
+                bottom: 0,
+                paddingBottom: `${Math.max(keyboardHeight + 8, 16)}px`,
+                transition: "padding-bottom 0.25s ease-out",
+              }
+            : {}
+        }
+      >
+        <div className="flex items-center gap-3 max-w-5xl mx-auto">
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Type a message..."
+            className="flex-1 px-5 py-3.5 rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600 text-base"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim()}
+            className="h-12 w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold flex items-center justify-center transition-colors shadow-md"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderImageUploadModal = () => {
+    if (!showImageUpload) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+        <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md border border-green-900/50 shadow-2xl">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
+            <button
+              onClick={() => {
+                setShowImageUpload(false);
+                setImageToUpload(null);
+                setUploadStatus("");
+              }}
+              className="text-3xl text-gray-400 hover:text-white"
+            >
+              ×
+            </button>
+          </div>
+
+          {imageToUpload && (
+            <div className="mb-6 rounded-xl overflow-hidden border border-green-800/60 shadow-inner">
+              <img
+                src={URL.createObjectURL(imageToUpload)}
+                alt="Preview"
+                className="w-full h-64 object-cover"
+              />
+            </div>
+          )}
+
+          <label className="block cursor-pointer">
+            <span className="sr-only">Choose file</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageToUpload(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-white
+                file:mr-4 file:py-3 file:px-6 file:rounded-xl
+                file:border-0 file:text-sm file:font-medium
+                file:bg-green-700 file:text-white
+                hover:file:bg-green-800 file:cursor-pointer
+                file:transition-colors"
+            />
+          </label>
+
+          <button
+            onClick={handleUpload}
+            disabled={!imageToUpload || uploadStatus.includes("Uploading")}
+            className={`mt-6 w-full py-3.5 rounded-xl font-semibold transition-all ${
+              uploadStatus.includes("success")
+                ? "bg-green-700 text-white"
+                : uploadStatus.includes("failed")
+                ? "bg-red-700 text-white"
+                : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black shadow-md"
+            }`}
+          >
+            {uploadStatus || "Upload Picture"}
+          </button>
+
+          {uploadStatus && (
+            <p
+              className={`mt-3 text-center text-sm font-medium ${
+                uploadStatus.includes("success") ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {uploadStatus}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Main Render ──────────────────────────────────────────────
   return (
     <div className="h-dvh w-screen bg-black flex flex-col overflow-hidden">
       {/* Mobile header */}
@@ -380,8 +513,8 @@ const ChatBoard = () => {
           />
         )}
 
-        {/* Main chat */}
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* Main chat area */}
+        <div className="flex-1 flex flex-col min-h-0 relative">
           <header className="hidden md:flex items-center gap-4 px-6 py-4 bg-gray-950 border-b border-green-900/50">
             {activeUser && (
               <>
@@ -439,98 +572,11 @@ const ChatBoard = () => {
             <div ref={messagesEndRef} />
           </main>
 
-          {/* Fixed input on mobile */}
-          <div
-            className={`
-              bg-gray-950 border-t border-green-900/60 px-4 py-4 transition-all duration-200
-              ${isMobile ? "fixed bottom-0 left-0 right-0 z-20" : ""}
-            `}
-            // style={isMobile ? { paddingBottom: `${keyboardHeight + 16}px` } : {}}
-          >
-            {selectedRecipientId && selectedRecipientId !== senderId && (
-              <div className="flex items-center gap-3 max-w-5xl mx-auto">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendMessage())}
-                  placeholder="Type a message..."
-                  className="flex-1 px-5 py-3.5 rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600 text-base"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim()}
-                  className="h-12 w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-black font-bold flex items-center justify-center transition-colors"
-                >
-                  ➤
-                </button>
-              </div>
-            )}
-          </div>
+          {renderMessageInput()}
         </div>
       </div>
 
-      {/* Image Upload Modal */}
-      {showImageUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md border border-green-900/40 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
-              <button
-                onClick={() => {
-                  setShowImageUpload(false);
-                  setImageToUpload(null);
-                  setUploadStatus("");
-                }}
-                className="text-3xl text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-
-            {imageToUpload && (
-              <div className="mb-6 rounded-xl overflow-hidden border border-green-800/50">
-                <img
-                  src={URL.createObjectURL(imageToUpload)}
-                  alt="Preview"
-                  className="w-full h-64 object-cover"
-                />
-              </div>
-            )}
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImageToUpload(e.target.files?.[0] ?? null)}
-              className="block w-full text-white file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-green-700 file:text-white hover:file:bg-green-800 cursor-pointer"
-            />
-
-            <button
-              onClick={handleUpload}
-              disabled={!imageToUpload || uploadStatus.includes("Uploading")}
-              className={`mt-6 w-full py-3.5 rounded-xl font-semibold transition-colors ${
-                uploadStatus.includes("success")
-                  ? "bg-green-700 text-white"
-                  : uploadStatus.includes("failed")
-                  ? "bg-red-700 text-white"
-                  : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black"
-              }`}
-            >
-              {uploadStatus || "Upload Picture"}
-            </button>
-
-            {uploadStatus && (
-              <p
-                className={`mt-3 text-center text-sm ${
-                  uploadStatus.includes("success") ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {uploadStatus}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      {renderImageUploadModal()}
 
       {/* Large profile view */}
       {largeProfileImg && (
