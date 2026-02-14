@@ -23,47 +23,47 @@ const ChatBoard = () => {
   const userName = localStorage.getItem("userName") || "User";
   const userDescription = localStorage.getItem("description") || "";
 
-  // ─── Socket Setup ───────────────────────────────────────
+  // ─── Socket Connection ────────────────────────────────────────
   useEffect(() => {
     socketRef.current = io("https://convo-backend-6nfw.onrender.com");
     return () => socketRef.current?.disconnect();
   }, []);
 
   useEffect(() => {
-    if (senderId) {
-      socketRef.current?.emit("join", senderId);
+    if (senderId && socketRef.current) {
+      socketRef.current.emit("join", senderId);
     }
   }, [senderId]);
 
-  // ─── Data Fetching ──────────────────────────────────────
+  // ─── Data Loading ─────────────────────────────────────────────
   const fetchAllUsers = useCallback(async () => {
     try {
       const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const users = await res.json();
-      setRecipients(users || []);
+      if (!res.ok) throw new Error("Failed to load users");
+      const data = await res.json();
+      setRecipients(data || []);
     } catch (err) {
-      console.error("Users fetch error:", err);
+      console.error("Error loading users:", err);
     }
   }, []);
 
-  const fetchConversation = useCallback(async () => {
+  const fetchMessages = useCallback(async () => {
     if (!selectedRecipientId || !senderId) return;
     try {
       const res = await fetch(
         `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
       );
-      if (!res.ok) throw new Error("Messages fetch failed");
+      if (!res.ok) throw new Error("Failed to load messages");
       const data = await res.json();
       setMessages(
-        data.map((m) => ({
-          id: m.id,
-          text: m.message,
-          sender: m.sender_id === senderId ? "me" : "other",
+        data.map((msg) => ({
+          id: msg.id,
+          text: msg.message,
+          sender: msg.sender_id === senderId ? "me" : "other",
         }))
       );
     } catch (err) {
-      console.error("Messages fetch error:", err);
+      console.error("Error loading messages:", err);
     }
   }, [senderId, selectedRecipientId]);
 
@@ -79,17 +79,18 @@ const ChatBoard = () => {
       }
       const { imageUrl } = await res.json();
       setYourImage(imageUrl || "");
-    } catch {
+    } catch (err) {
+      console.error("Failed to load profile image:", err);
       setYourImage("");
     }
   }, [senderId]);
 
-  // ─── Effects ────────────────────────────────────────────
+  // ─── Effects ──────────────────────────────────────────────────
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const timer = setTimeout(() => {
       setDebouncedSearch(search.trim().toLowerCase());
     }, 450);
-    return () => clearTimeout(handler);
+    return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
@@ -100,40 +101,40 @@ const ChatBoard = () => {
   }, [senderId, fetchAllUsers, fetchMyProfileImage]);
 
   useEffect(() => {
-    if (selectedRecipientId) fetchConversation();
-  }, [selectedRecipientId, fetchConversation]);
+    if (selectedRecipientId) fetchMessages();
+  }, [selectedRecipientId, fetchMessages]);
 
-  // Real-time messages
+  // Real-time incoming messages
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    const onMessage = (msg) => {
+    const handleReceive = (message) => {
       if (
-        msg.senderId === selectedRecipientId ||
-        msg.reciepientId === selectedRecipientId
+        message.senderId === selectedRecipientId ||
+        message.reciepientId === selectedRecipientId
       ) {
         setMessages((prev) => [
           ...prev,
           {
-            id: msg.id || Date.now(),
-            text: msg.messageText,
-            sender: msg.senderId === senderId ? "me" : "other",
+            id: message.id || Date.now(),
+            text: message.messageText,
+            sender: message.senderId === senderId ? "me" : "other",
           },
         ]);
       }
     };
 
-    socket.on("receiveMessage", onMessage);
-    return () => socket.off("receiveMessage", onMessage);
+    socket.on("receiveMessage", handleReceive);
+    return () => socket.off("receiveMessage", handleReceive);
   }, [selectedRecipientId, senderId]);
 
-  // Auto-scroll
+  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ─── Actions ────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || !selectedRecipientId || selectedRecipientId === senderId) return;
@@ -144,7 +145,7 @@ const ChatBoard = () => {
       messageText: trimmed,
     };
 
-    // Optimistic UI
+    // Optimistic update
     setMessages((prev) => [...prev, { id: Date.now(), text: trimmed, sender: "me" }]);
     setInput("");
 
@@ -157,11 +158,11 @@ const ChatBoard = () => {
         body: JSON.stringify(payload),
       });
     } catch (err) {
-      console.error("Message save failed:", err);
+      console.error("Failed to save message:", err);
     }
   };
 
-  const uploadProfilePicture = async () => {
+  const handleUpload = async () => {
     if (!imageToUpload || !senderId) return;
 
     const formData = new FormData();
@@ -175,16 +176,16 @@ const ChatBoard = () => {
       );
 
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error || "Upload failed");
+        const errData = await res.json();
+        throw new Error(errData.error || "Upload failed");
       }
 
       setShowImageUpload(false);
       setImageToUpload(null);
       await fetchMyProfileImage();
-      alert("Profile picture updated successfully!");
+      alert("Profile picture updated!");
     } catch (err) {
-      alert(`Upload failed: ${err.message}`);
+      alert("Failed to upload: " + err.message);
     }
   };
 
@@ -193,44 +194,49 @@ const ChatBoard = () => {
     window.location.href = "/login";
   };
 
-  const selectUser = (userId) => {
-    setSelectedRecipientId(userId);
+  const selectUser = (id) => {
+    setSelectedRecipientId(id);
     setShowMobileUserList(false);
   };
 
-  // ─── Derived Data ───────────────────────────────────────
-  const filteredUsers = recipients.filter((u) =>
+  // ─── Computed ─────────────────────────────────────────────────
+  const filteredRecipients = recipients.filter((u) =>
     u.username.toLowerCase().includes(debouncedSearch)
   );
 
-  const activeUser = recipients.find((u) => u.id === selectedRecipientId);
+  const activeChatUser = recipients.find((u) => u.id === selectedRecipientId);
 
-  // ─── JSX ────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────
   return (
     <div className="h-screen w-screen bg-black flex flex-col md:flex-row overflow-hidden">
-      {/* Mobile Top Bar */}
+      {/* ─── Mobile Header ──────────────────────────────────────── */}
       <div className="md:hidden bg-gray-950 border-b border-green-900/40 px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => setShowMobileUserList(true)}
           className="text-green-400 text-2xl focus:outline-none"
+          aria-label="Open user list"
         >
           ☰
         </button>
 
-        <div className="flex items-center gap-3 max-w-[70%]">
-          {activeUser ? (
+        <div className="flex-1 flex items-center justify-center gap-3">
+          {activeChatUser ? (
             <>
               <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/50 flex-shrink-0">
-                {activeUser.image ? (
-                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                {activeChatUser.image ? (
+                  <img
+                    src={activeChatUser.image}
+                    alt={activeChatUser.username}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold">
-                    {activeUser.username?.[0]?.toUpperCase()}
+                    {activeChatUser.username?.[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
-              <h2 className="text-green-300 font-semibold truncate">
-                {activeUser.username}
+              <h2 className="text-green-300 font-semibold truncate max-w-[180px]">
+                {activeChatUser.username}
               </h2>
             </>
           ) : (
@@ -238,10 +244,29 @@ const ChatBoard = () => {
           )}
         </div>
 
-        <div className="w-8" />
+        {/* Your own profile picture – clickable to change DP */}
+        <div
+          onClick={() => setShowImageUpload(true)}
+          className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/50 cursor-pointer bg-gradient-to-br from-green-700 to-green-800 flex-shrink-0"
+          role="button"
+          aria-label="Change your profile picture"
+        >
+          {yourImage ? (
+            <img
+              src={yourImage}
+              alt="Your profile"
+              className="h-full w-full object-cover"
+              onError={() => setYourImage("")}
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-black font-bold text-sm">
+              {userName?.[0]?.toUpperCase() || "?"}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* User List ─ Sidebar (desktop) / Drawer (mobile) */}
+      {/* ─── User List Drawer / Sidebar ─────────────────────────── */}
       <aside
         className={`
           fixed md:static inset-y-0 left-0 z-40 w-80 bg-gray-950 border-r border-green-900/30
@@ -250,12 +275,12 @@ const ChatBoard = () => {
           flex flex-col
         `}
       >
-        {/* Mobile drawer header */}
         <div className="md:hidden p-4 border-b border-green-900/30 flex justify-between items-center">
           <h1 className="text-green-400 text-2xl font-bold">CONVO</h1>
           <button
             onClick={() => setShowMobileUserList(false)}
             className="text-3xl text-gray-300 hover:text-white"
+            aria-label="Close user list"
           >
             ×
           </button>
@@ -271,7 +296,7 @@ const ChatBoard = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filteredUsers.map((user) => (
+          {filteredRecipients.map((user) => (
             <div
               key={user.id}
               onClick={() => selectUser(user.id)}
@@ -297,7 +322,7 @@ const ChatBoard = () => {
                     ? user.message.length > 38
                       ? user.message.slice(0, 38) + "..."
                       : user.message
-                    : "Start a conversation"}
+                    : "Start chatting"}
                 </p>
               </div>
             </div>
@@ -305,7 +330,7 @@ const ChatBoard = () => {
         </div>
       </aside>
 
-      {/* Mobile overlay */}
+      {/* Mobile overlay when drawer is open */}
       {showMobileUserList && (
         <div
           className="fixed inset-0 bg-black/60 z-30 md:hidden"
@@ -313,25 +338,25 @@ const ChatBoard = () => {
         />
       )}
 
-      {/* Main Chat Area */}
+      {/* ─── Main Chat Area ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Desktop chat header */}
         <header className="hidden md:flex items-center gap-3 px-5 py-3.5 bg-gray-950/90 border-b border-green-900/30">
           <div className="h-11 w-11 rounded-full overflow-hidden border-2 border-green-600/50 flex-shrink-0">
-            {activeUser?.image ? (
-              <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
-            ) : activeUser ? (
+            {activeChatUser?.image ? (
+              <img src={activeChatUser.image} alt="" className="h-full w-full object-cover" />
+            ) : activeChatUser ? (
               <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold">
-                {activeUser.username?.[0]?.toUpperCase()}
+                {activeChatUser.username?.[0]?.toUpperCase()}
               </div>
             ) : null}
           </div>
           <div>
             <h2 className="text-green-300 font-semibold">
-              {activeUser?.username || "Select a user to chat"}
+              {activeChatUser?.username || "Select someone to chat"}
             </h2>
-            {activeUser && (
-              <div className="flex items-center gap-2 text-xs text-gray-400">
+            {activeChatUser && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                 Online
               </div>
@@ -339,11 +364,11 @@ const ChatBoard = () => {
           </div>
         </header>
 
-        {/* Messages List */}
+        {/* Messages */}
         <main className="flex-1 p-4 md:p-5 overflow-y-auto bg-gradient-to-b from-black via-gray-950 to-black">
           {messages.length === 0 && selectedRecipientId && (
             <div className="h-full flex items-center justify-center text-gray-500 text-center text-sm md:text-base">
-              No messages yet.<br />Say something nice! 🌱
+              No messages yet.<br />Say hello! 👋
             </div>
           )}
 
@@ -368,7 +393,7 @@ const ChatBoard = () => {
           <div ref={messagesEndRef} />
         </main>
 
-        {/* Message Input */}
+        {/* Input area */}
         <footer className="p-4 bg-gray-950 border-t border-green-900/30 flex items-center gap-3">
           <input
             value={input}
@@ -379,14 +404,14 @@ const ChatBoard = () => {
                 sendMessage();
               }
             }}
-            placeholder="Type your message..."
+            placeholder="Type a message..."
             className="flex-1 px-5 py-3 rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600 text-sm md:text-base"
           />
           {selectedRecipientId && selectedRecipientId !== senderId && (
             <button
               onClick={sendMessage}
               disabled={!input.trim()}
-              className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold flex items-center justify-center transition-colors flex-shrink-0"
+              className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-black font-bold flex items-center justify-center transition-colors flex-shrink-0"
             >
               ➤
             </button>
@@ -394,14 +419,14 @@ const ChatBoard = () => {
         </footer>
       </div>
 
-      {/* Your Profile Sidebar – desktop only */}
+      {/* ─── Your Profile Sidebar (desktop only) ────────────────── */}
       <aside className="hidden lg:flex w-80 bg-gray-950 border-l border-green-900/30 flex-col items-center py-10 px-4">
         <div
           onClick={() => setShowImageUpload(true)}
           className="h-48 w-48 lg:h-56 lg:w-56 rounded-full bg-gradient-to-br from-green-600 to-green-800 cursor-pointer overflow-hidden border-4 border-green-500/40 shadow-2xl flex items-center justify-center text-5xl font-bold text-black"
         >
           {yourImage ? (
-            <img src={yourImage} alt="You" className="h-full w-full object-cover" onError={() => setYourImage("")} />
+            <img src={yourImage} alt="Your profile" className="h-full w-full object-cover" onError={() => setYourImage("")} />
           ) : (
             <span>{userName?.[0]?.toUpperCase() || "?"}</span>
           )}
@@ -425,12 +450,12 @@ const ChatBoard = () => {
         </div>
       </aside>
 
-      {/* Profile Picture Upload Modal */}
+      {/* ─── Image Upload Modal ─────────────────────────────────── */}
       {showImageUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-gray-900 rounded-2xl p-6 md:p-8 w-full max-w-md border border-green-900/30 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-green-400 text-xl font-semibold">Update Profile Picture</h2>
+              <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
               <button
                 onClick={() => {
                   setShowImageUpload(false);
@@ -460,11 +485,11 @@ const ChatBoard = () => {
             />
 
             <button
-              onClick={uploadProfilePicture}
+              onClick={handleUpload}
               disabled={!imageToUpload}
               className="mt-6 w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:text-gray-400 text-black font-semibold rounded-lg transition-colors"
             >
-              Upload
+              Upload Picture
             </button>
           </div>
         </div>
