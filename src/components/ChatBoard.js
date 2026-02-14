@@ -38,7 +38,9 @@ const ChatBoard = () => {
   // ─── Data Loading ─────────────────────────────────────────────
   const fetchAllUsers = useCallback(async () => {
     try {
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
+      );
       if (!res.ok) throw new Error("Failed to load users");
       const data = await res.json();
       setRecipients(data || []);
@@ -51,7 +53,7 @@ const ChatBoard = () => {
     if (!selectedRecipientId || !senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
       );
       if (!res.ok) throw new Error("Failed to load messages");
       const data = await res.json();
@@ -60,7 +62,7 @@ const ChatBoard = () => {
           id: msg.id,
           text: msg.message,
           sender: msg.sender_id === senderId ? "me" : "other",
-        }))
+        })),
       );
     } catch (err) {
       console.error("Error loading messages:", err);
@@ -71,7 +73,7 @@ const ChatBoard = () => {
     if (!senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`
+        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
       );
       if (res.status === 404 || !res.ok) {
         setYourImage("");
@@ -137,7 +139,8 @@ const ChatBoard = () => {
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed || !selectedRecipientId || selectedRecipientId === senderId) return;
+    if (!trimmed || !selectedRecipientId || selectedRecipientId === senderId)
+      return;
 
     const payload = {
       senderId,
@@ -146,17 +149,23 @@ const ChatBoard = () => {
     };
 
     // Optimistic update
-    setMessages((prev) => [...prev, { id: Date.now(), text: trimmed, sender: "me" }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), text: trimmed, sender: "me" },
+    ]);
     setInput("");
 
     socketRef.current?.emit("sendMessage", payload);
 
     try {
-      await fetch("https://convo-backend-6nfw.onrender.com/api/messages/createMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
     } catch (err) {
       console.error("Failed to save message:", err);
     }
@@ -172,7 +181,7 @@ const ChatBoard = () => {
     try {
       const res = await fetch(
         "https://convo-backend-6nfw.onrender.com/api/images/uploadImage",
-        { method: "POST", body: formData }
+        { method: "POST", body: formData },
       );
 
       if (!res.ok) {
@@ -201,7 +210,7 @@ const ChatBoard = () => {
 
   // ─── Computed ─────────────────────────────────────────────────
   const filteredRecipients = recipients.filter((u) =>
-    u.username.toLowerCase().includes(debouncedSearch)
+    u.username.toLowerCase().includes(debouncedSearch),
   );
 
   const activeChatUser = recipients.find((u) => u.id === selectedRecipientId);
@@ -308,7 +317,11 @@ const ChatBoard = () => {
             >
               <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-green-600/40 flex-shrink-0 bg-green-700">
                 {user.image ? (
-                  <img src={user.image} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={user.image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-black font-bold">
                     {user.username?.slice(0, 2).toUpperCase()}
@@ -316,7 +329,9 @@ const ChatBoard = () => {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{user.username}</p>
+                <p className="text-white font-medium truncate">
+                  {user.username}
+                </p>
                 <p className="text-xs text-gray-400 truncate">
                   {user.message
                     ? user.message.length > 38
@@ -344,7 +359,11 @@ const ChatBoard = () => {
         <header className="hidden md:flex items-center gap-3 px-5 py-3.5 bg-gray-950/90 border-b border-green-900/30">
           <div className="h-11 w-11 rounded-full overflow-hidden border-2 border-green-600/50 flex-shrink-0">
             {activeChatUser?.image ? (
-              <img src={activeChatUser.image} alt="" className="h-full w-full object-cover" />
+              <img
+                src={activeChatUser.image}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             ) : activeChatUser ? (
               <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold">
                 {activeChatUser.username?.[0]?.toUpperCase()}
@@ -368,7 +387,9 @@ const ChatBoard = () => {
         <main className="flex-1 p-4 md:p-5 overflow-y-auto bg-gradient-to-b from-black via-gray-950 to-black">
           {messages.length === 0 && selectedRecipientId && (
             <div className="h-full flex items-center justify-center text-gray-500 text-center text-sm md:text-base">
-              No messages yet.<br />Say hello! 👋
+              No messages yet.
+              <br />
+              Say hello! 👋
             </div>
           )}
 
@@ -380,9 +401,11 @@ const ChatBoard = () => {
               <div
                 className={`
                   max-w-[82%] md:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm
-                  ${msg.sender === "me"
-                    ? "bg-green-600 text-black rounded-br-none"
-                    : "bg-gray-800 text-white rounded-bl-none"}
+                  ${
+                    msg.sender === "me"
+                      ? "bg-green-600 text-black rounded-br-none"
+                      : "bg-gray-800 text-white rounded-bl-none"
+                  }
                 `}
               >
                 {msg.text}
@@ -426,7 +449,12 @@ const ChatBoard = () => {
           className="h-48 w-48 lg:h-56 lg:w-56 rounded-full bg-gradient-to-br from-green-600 to-green-800 cursor-pointer overflow-hidden border-4 border-green-500/40 shadow-2xl flex items-center justify-center text-5xl font-bold text-black"
         >
           {yourImage ? (
-            <img src={yourImage} alt="Your profile" className="h-full w-full object-cover" onError={() => setYourImage("")} />
+            <img
+              src={yourImage}
+              alt="Your profile"
+              className="h-full w-full object-cover"
+              onError={() => setYourImage("")}
+            />
           ) : (
             <span>{userName?.[0]?.toUpperCase() || "?"}</span>
           )}
@@ -434,9 +462,13 @@ const ChatBoard = () => {
 
         <div className="mt-8 text-center">
           <p className="text-gray-400 text-sm">Welcome back</p>
-          <h1 className="text-green-400 text-2xl lg:text-3xl font-bold mt-1.5">{userName}</h1>
+          <h1 className="text-green-400 text-2xl lg:text-3xl font-bold mt-1.5">
+            {userName}
+          </h1>
           {userDescription && (
-            <p className="text-gray-400 text-sm mt-3 italic">~ {userDescription}</p>
+            <p className="text-gray-400 text-sm mt-3 italic">
+              ~ {userDescription}
+            </p>
           )}
         </div>
 
@@ -455,7 +487,9 @@ const ChatBoard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-gray-900 rounded-2xl p-6 md:p-8 w-full max-w-md border border-green-900/30 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
+              <h2 className="text-green-400 text-xl font-semibold">
+                Change Profile Picture
+              </h2>
               <button
                 onClick={() => {
                   setShowImageUpload(false);
@@ -477,7 +511,6 @@ const ChatBoard = () => {
               </div>
             )}
 
-            <label className="block mb-2 text-sm text-gray-400">Select an image</label>
             <input
               type="file"
               accept="image/*"
