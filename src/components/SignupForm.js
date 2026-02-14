@@ -26,7 +26,7 @@ const SignupForm = () => {
     localStorage.setItem("userId" , res.id);
     localStorage.setItem("userName" , res.username);
     localStorage.setItem("description", res.description)
-      if (signup.id) {
+      if (res.id) {
         navigate("/chatconvo"); // or "/login"
       } else {
         setMessage(res.message || "Signup failed, try again");
