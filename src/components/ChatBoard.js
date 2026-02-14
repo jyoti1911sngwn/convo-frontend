@@ -463,7 +463,7 @@ const ChatBoard = () => {
             </button>
             <img
               src={largeProfileImg}
-              alt="Profile picture"
+              alt="User profile"
               className="w-full h-auto max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-green-800/40"
               onClick={(e) => e.stopPropagation()}
             />
