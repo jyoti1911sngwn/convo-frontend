@@ -6,7 +6,7 @@ const ChatBoard = () => {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [isDelievered, setIsDelievered] = useState(false);
+  const [isDelivered, setIsDelivered] = useState(false);
   const [recipients, setRecipients] = useState([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState(null);
 
@@ -14,15 +14,16 @@ const ChatBoard = () => {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [imageToUpload, setImageToUpload] = useState(null);
 
-  const [showMobileUserList, setShowMobileUserList] = useState(false);
-  const [largeProfileImg, setLargeProfileImg] = useState(null); // for enlarged view
+  const [showMobileUserList, setShowMobileUserList] = useState(true); // default true on mobile
+  const [largeProfileImg, setLargeProfileImg] = useState(null);
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const senderId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "User";
-  const userDescription = localStorage.getItem("description") || "";
+  // const userDescription = localStorage.getItem("description") || "";
 
   // ─── Socket ───────────────────────────────────────────────────
   useEffect(() => {
@@ -37,9 +38,7 @@ const ChatBoard = () => {
   // ─── Data Fetching ────────────────────────────────────────────
   const fetchAllUsers = useCallback(async () => {
     try {
-      const res = await fetch(
-        "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
-      );
+      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
       if (!res.ok) throw new Error("Failed to load users");
       setRecipients((await res.json()) || []);
     } catch (err) {
@@ -51,7 +50,7 @@ const ChatBoard = () => {
     if (!selectedRecipientId || !senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
       );
       if (!res.ok) throw new Error("Messages fetch failed");
       const data = await res.json();
@@ -60,7 +59,7 @@ const ChatBoard = () => {
           id: msg.id,
           text: msg.message,
           sender: msg.sender_id === senderId ? "me" : "other",
-        })),
+        }))
       );
     } catch (err) {
       console.error("Messages fetch error:", err);
@@ -70,9 +69,7 @@ const ChatBoard = () => {
   const fetchMyProfileImage = useCallback(async () => {
     if (!senderId) return;
     try {
-      const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
-      );
+      const res = await fetch(`https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`);
       if (res.status === 404 || !res.ok) return setYourImage("");
       const { imageUrl } = await res.json();
       setYourImage(imageUrl || "");
@@ -85,7 +82,7 @@ const ChatBoard = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search.trim().toLowerCase());
-    }, 400);
+    }, 350);
     return () => clearTimeout(timer);
   }, [search]);
 
@@ -100,19 +97,26 @@ const ChatBoard = () => {
     if (selectedRecipientId) fetchMessages();
   }, [selectedRecipientId, fetchMessages]);
 
-  // Real-time messages
+  // Auto-select first user on desktop/large screens when list loads
+  useEffect(() => {
+    if (recipients.length > 0 && !selectedRecipientId && window.innerWidth >= 768) {
+      setSelectedRecipientId(recipients[0].id);
+      setShowMobileUserList(false);
+    }
+  }, [recipients, selectedRecipientId]);
+
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
     const onReceive = (msg) => {
-      // msg now has real id, created_at, etc.
-      if (msg.senderId === senderId) setIsDelievered(true);
+      if (msg.senderId === senderId) {
+  setIsDelivered(true);
+  return;
+}
 
-      if (
-        msg.senderId === selectedRecipientId ||
-        msg.recipientId === selectedRecipientId
-      ) {
+
+      if (msg.senderId === selectedRecipientId || msg.recipientId === selectedRecipientId) {
         setMessages((prev) => [
           ...prev,
           {
@@ -135,457 +139,356 @@ const ChatBoard = () => {
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !selectedRecipientId || selectedRecipientId === senderId)
-      return;
+    if (!text || !selectedRecipientId || selectedRecipientId === senderId) return;
 
-    const optimisticId = Date.now(); // temporary id
+    const optimisticId = Date.now();
+    const optimisticMsg = { id: optimisticId, text, sender: "me" };
 
-    const optimisticMsg = {
-      id: optimisticId,
-      text,
-      sender: "me",
-    };
-
-    // Show immediately (optimistic update)
     setMessages((prev) => [...prev, optimisticMsg]);
     setInput("");
 
-    const payload = {
-      senderId,
-      recipientId: selectedRecipientId,
-      messageText: text,
-    };
-
-    // Emit to socket → other person sees it instantly
+    const payload = { senderId, recipientId: selectedRecipientId, messageText: text };
     socketRef.current?.emit("sendMessage", payload);
 
     try {
-      const res = await fetch(
-        "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/messages/createMessage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       if (!res.ok) {
-        const errData = await res.json();
-        console.error("Save failed:", errData);
-        // Optional: remove optimistic message or show error
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
         return;
       }
 
-      const savedMessage = await res.json(); // ← this is the row from Supabase .single()
-
-      // Replace optimistic message with real one (has real id, created_at, etc.)
+      const saved = await res.json();
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === optimisticId
-            ? {
-                id: savedMessage.id,
-                text: savedMessage.message,
-                sender: "me",
-                // you can also add created_at: savedMessage.created_at if you want
-              }
-            : m,
-        ),
+          m.id === optimisticId ? { ...m, id: saved.id } : m
+        )
       );
-    } catch (err) {
-      console.error("Network error:", err);
-      // Optional: remove optimistic message on network failure
+    } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
     }
   };
 
-  const handleUpload = async () => {
-    if (!imageToUpload || !senderId) return;
-
-    const formData = new FormData();
-    formData.append("image", imageToUpload);
-    formData.append("userId", senderId);
-
-    try {
-      const res = await fetch(
-        "https://convo-backend-6nfw.onrender.com/api/images/uploadImage",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Upload failed");
-      }
-
-      setShowImageUpload(false);
-      setImageToUpload(null);
-      await fetchMyProfileImage();
-      alert("Profile picture updated!");
-    } catch (err) {
-      alert("Upload failed: " + err.message);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
-
   const selectUser = (id) => {
     setSelectedRecipientId(id);
-    setShowMobileUserList(false);
+    if (window.innerWidth < 768) {
+      setShowMobileUserList(false);
+    }
   };
 
   // ─── Derived ──────────────────────────────────────────────────
   const filteredRecipients = recipients.filter((u) =>
-    u.username.toLowerCase().includes(debouncedSearch),
+    u.username.toLowerCase().includes(debouncedSearch)
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
 
+  const isMobile = window.innerWidth < 768;
+
   // ─── Render ───────────────────────────────────────────────────
   return (
-    <div className="h-screen w-screen bg-black flex flex-col md:flex-row overflow-hidden">
-      {senderId && (
-        <>
-          <div className="md:hidden bg-gray-950 border-b border-green-900/40 px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => setShowMobileUserList(true)}
-              className="text-green-400 text-2xl"
-              aria-label="Open contacts"
-            >
-              ☰
-            </button>
+    <div className="h-dvh w-screen bg-black flex flex-col overflow-hidden">
+      {/* ─── MOBILE HEADER ──────────────────────────────────────── */}
+      <div className="md:hidden bg-gray-950 border-b border-green-900/50 px-4 py-3 flex items-center justify-between z-20 relative">
+        <button
+          onClick={() => setShowMobileUserList(true)}
+          className="text-green-400 text-2xl"
+          aria-label="Show contacts"
+        >
+          ☰
+        </button>
 
-            <div className="flex-1 flex items-center justify-center gap-3">
-              {activeUser ? (
-                <>
-                  <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/50">
-                    {activeUser.image ? (
-                      <img
-                        src={activeUser.image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold">
-                        {activeUser.username?.[0]?.toUpperCase()}
-                      </div>
-                    )}
+        <div className="flex-1 flex items-center justify-center gap-3 min-w-0">
+          {activeUser ? (
+            <>
+              <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/60 flex-shrink-0">
+                {activeUser.image ? (
+                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-green-800/80 flex items-center justify-center text-white font-bold text-lg">
+                    {activeUser.username?.[0]?.toUpperCase()}
                   </div>
-                  <h2 className="text-green-300 font-semibold truncate max-w-[160px]">
-                    {activeUser.username}
-                  </h2>
-                </>
-              ) : (
-                <h2 className="text-gray-400 font-medium">CONVO</h2>
-              )}
-            </div>
+                )}
+              </div>
+              <h2 className="text-green-200 font-semibold truncate">
+                {activeUser.username}
+              </h2>
+            </>
+          ) : (
+            <h2 className="text-gray-400 font-medium">CONVO</h2>
+          )}
+        </div>
 
-            <div
-              onClick={() => setShowImageUpload(true)}
-              className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/50 cursor-pointer"
-            >
-              {yourImage ? (
-                <img
-                  src={yourImage}
-                  alt="You"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold text-sm">
-                  {userName?.[0]?.toUpperCase() || "?"}
-                </div>
-              )}
+        <div
+          onClick={() => setShowImageUpload(true)}
+          className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/60 cursor-pointer flex-shrink-0"
+        >
+          {yourImage ? (
+            <img src={yourImage} alt="You" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-green-800/80 flex items-center justify-center text-white font-bold text-lg">
+              {userName?.[0]?.toUpperCase() || "?"}
             </div>
-          </div>
+          )}
+        </div>
+      </div>
 
-          {/* Sidebar / Drawer */}
-          <aside
-            className={`
-          fixed md:static inset-y-0 left-0 z-40 w-80 bg-gray-950 border-r border-green-900/30
-          transform transition-transform duration-300 md:translate-x-0
+      {/* ─── SIDEBAR (Drawer on mobile) ──────────────────────────── */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-40 w-80 sm:w-96 bg-gray-950 border-r border-green-900/40
+          transform transition-transform duration-300 ease-in-out
           ${showMobileUserList ? "translate-x-0" : "-translate-x-full"}
-          flex flex-col
+          md:translate-x-0 flex flex-col
         `}
+      >
+        {/* Mobile header inside drawer */}
+        <div className="md:hidden p-4 border-b border-green-900/50 flex justify-between items-center">
+          <h1 className="text-green-400 text-2xl font-bold tracking-tight">CONVO</h1>
+          <button
+            onClick={() => setShowMobileUserList(false)}
+            className="text-3xl text-gray-300 hover:text-white"
           >
-            <div className="md:hidden p-4 border-b border-green-900/30 flex justify-between items-center">
-              <h1 className="text-green-400 text-2xl font-bold">CONVO</h1>
+            ×
+          </button>
+        </div>
+
+        <div className="p-4 border-b border-green-900/40">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search users..."
+            className="w-full px-4 py-3 rounded-xl bg-gray-800/80 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600/70 text-sm"
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-green-900/50">
+          {filteredRecipients.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 text-sm">
+              No users found
+            </div>
+          ) : (
+            filteredRecipients.map((user) => (
+              <div
+                key={user.id}
+                onClick={() => selectUser(user.id)}
+                className={`flex items-center gap-3.5 px-4 py-3.5 cursor-pointer transition-colors
+                  ${selectedRecipientId === user.id ? "bg-green-900/20" : "hover:bg-gray-800/60"}`}
+              >
+                <div
+                  className="h-12 w-12 rounded-full overflow-hidden border-2 border-green-700/50 flex-shrink-0 cursor-zoom-in"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (user.image) setLargeProfileImg(user.image);
+                  }}
+                >
+                  {user.image ? (
+                    <img src={user.image} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-green-800/70 flex items-center justify-center text-white font-bold text-lg">
+                      {user.username?.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium truncate">{user.username}</p>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                    {user.message || "Start a conversation"}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="md:hidden p-4 border-t border-green-900/40">
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = "/login";
+            }}
+            className="w-full py-3.5 bg-red-700/90 hover:bg-red-800 text-white rounded-xl font-medium transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Overlay when mobile sidebar is open */}
+      {showMobileUserList && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
+          onClick={() => setShowMobileUserList(false)}
+        />
+      )}
+
+      {/* ─── MAIN CHAT AREA ─────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        {/* Desktop header */}
+        <header className="hidden md:flex items-center gap-4 px-6 py-4 bg-gray-950/90 border-b border-green-900/50">
+          {activeUser ? (
+            <>
+              <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-green-600/60 flex-shrink-0">
+                {activeUser.image ? (
+                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold">
+                    {activeUser.username?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h2 className="text-green-200 font-semibold">{activeUser.username}</h2>
+                <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                  <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                  Online
+                </div>
+              </div>
+            </>
+          ) : (
+            <h2 className="text-gray-400 font-medium">Select a conversation</h2>
+          )}
+        </header>
+
+        {/* Chat messages */}
+        <main
+          ref={chatContainerRef}
+          className="flex-1 p-4 sm:p-5 md:p-6 overflow-y-auto bg-gradient-to-b from-black via-gray-950 to-black scrollbar-thin scrollbar-thumb-green-900/40"
+        >
+          {!selectedRecipientId ? (
+            <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center px-6">
+              <div className="text-6xl mb-6">💬</div>
+              <h3 className="text-xl font-medium text-gray-300 mb-3">Welcome to CONVO</h3>
+              <p className="max-w-md">Select a user from the list to start chatting</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-gray-500 text-center">
+              No messages yet.<br />Say hello! 👋
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex mb-4 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`
+                    max-w-[82%] sm:max-w-[75%] md:max-w-[68%] lg:max-w-[60%]
+                    px-4 py-2.5 rounded-2xl text-[15px] sm:text-base leading-relaxed shadow-sm
+                    ${msg.sender === "me"
+                      ? "bg-green-600 text-black rounded-br-none"
+                      : "bg-gray-800 text-white rounded-bl-none"}
+                  `}
+                >
+                  {msg.text}
+                  {msg.sender === "me" && isDelivered && (
+                    <span className="text-xs text-gray-300/80 ml-2 align-bottom">✓</span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </main>
+
+        {/* Input area */}
+        {selectedRecipientId && selectedRecipientId !== senderId && (
+          <footer className="p-4 bg-gray-950 border-t border-green-900/50">
+            <div className="flex items-center gap-3 max-w-5xl mx-auto">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Type your message..."
+                className="flex-1 px-5 py-3.5 rounded-full bg-gray-800/90 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600/70 text-base"
+              />
               <button
-                onClick={() => setShowMobileUserList(false)}
-                className="text-3xl text-gray-300"
+                onClick={sendMessage}
+                disabled={!input.trim()}
+                className="h-12 w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                ➤
+              </button>
+            </div>
+          </footer>
+        )}
+      </div>
+
+      {/* ─── IMAGE UPLOAD MODAL ─────────────────────────────────── */}
+      {showImageUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 w-full max-w-md border border-green-900/40 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-green-400 text-xl font-semibold">Update Profile Picture</h2>
+              <button
+                onClick={() => {
+                  setShowImageUpload(false);
+                  setImageToUpload(null);
+                }}
+                className="text-3xl text-gray-400 hover:text-white"
               >
                 ×
               </button>
             </div>
 
-            <div className="p-4 border-b border-green-900/30">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search users..."
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600 text-sm"
-              />
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {filteredRecipients.map((user) => (
-                <div
-                  key={user.id}
-                  onClick={() => selectUser(user.id)}
-                  className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-gray-800/70 ${selectedRecipientId === user.id ? "bg-gray-800/50" : ""}`}
-                >
-                  <div
-                    className="h-12 w-12 rounded-full overflow-hidden border-2 border-green-600/40 flex-shrink-0 bg-green-700 cursor-zoom-in"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (user.image) setLargeProfileImg(user.image);
-                    }}
-                  >
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-black font-bold">
-                        {user.username?.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">
-                      {user.username}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {user.message
-                        ? user.message.length > 38
-                          ? user.message.slice(0, 38) + "..."
-                          : user.message
-                        : "Start chatting"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="md:hidden p-4 border-t border-green-900/30 mt-auto">
-              <button
-                onClick={handleLogout}
-                className="w-full py-3 bg-red-600/90 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </aside>
-
-          {showMobileUserList && (
-            <div
-              className="fixed inset-0 bg-black/60 z-30 md:hidden"
-              onClick={() => setShowMobileUserList(false)}
-            />
-          )}
-
-          {/* Main Chat */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <header className="hidden md:flex items-center gap-3 px-5 py-3.5 bg-gray-950/90 border-b border-green-900/30">
-              <div className="h-11 w-11 rounded-full overflow-hidden border-2 border-green-600/50">
-                {activeUser?.image ? (
-                  <img
-                    src={activeUser.image}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : activeUser ? (
-                  <div className="h-full w-full bg-green-700 flex items-center justify-center text-black font-bold">
-                    {activeUser.username?.[0]?.toUpperCase()}
-                  </div>
-                ) : null}
-              </div>
-              <div>
-                <h2 className="text-green-300 font-semibold">
-                  {activeUser?.username || "Select someone to chat"}
-                </h2>
-                {activeUser && (
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                    Online
-                  </div>
-                )}
-              </div>
-            </header>
-
-            <main className="flex-1 p-4 md:p-5 overflow-y-auto bg-gradient-to-b from-black via-gray-950 to-black">
-              {messages.length === 0 && selectedRecipientId && (
-                <div className="h-full flex items-center justify-center text-gray-500 text-center">
-                  No messages yet.
-                  <br />
-                  Say hello! 👋
-                </div>
-              )}
-
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex mb-4 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`
-                  max-w-[80%] md:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm
-                  ${msg.sender === "me" ? "bg-green-600 text-black rounded-br-none" : "bg-gray-800 text-white rounded-bl-none"}
-                `}
-                  >
-                    {msg.text}
-                    {isDelievered && msg.sender === "me" && (
-                      <span className="text-xs text-gray-400 ml-2">✓</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              <div ref={messagesEndRef} />
-            </main>
-
-            <footer className="p-4 bg-gray-950 border-t border-green-900/30 flex items-center gap-3">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  !e.shiftKey &&
-                  (e.preventDefault(), sendMessage())
-                }
-                placeholder="Type a message..."
-                className="flex-1 px-5 py-3 rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600 text-sm md:text-base"
-              />
-              {selectedRecipientId && selectedRecipientId !== senderId && (
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim()}
-                  className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-black font-bold flex items-center justify-center transition-colors"
-                >
-                  ➤
-                </button>
-              )}
-            </footer>
-          </div>
-
-          {/* Desktop Profile Sidebar */}
-          <aside className="hidden lg:flex w-80 bg-gray-950 border-l border-green-900/30 flex-col items-center py-10 px-4">
-            <div
-              onClick={() => setShowImageUpload(true)}
-              className="h-48 w-48 lg:h-56 lg:w-56 rounded-full bg-gradient-to-br from-green-600 to-green-800 cursor-pointer overflow-hidden border-4 border-green-500/40 shadow-2xl flex items-center justify-center text-5xl font-bold text-black"
-            >
-              {yourImage ? (
+            {imageToUpload && (
+              <div className="mb-6 rounded-xl overflow-hidden border border-green-800/50 shadow-inner">
                 <img
-                  src={yourImage}
-                  alt="You"
-                  className="h-full w-full object-cover"
-                  onError={() => setYourImage("")}
+                  src={URL.createObjectURL(imageToUpload)}
+                  alt="Preview"
+                  className="w-full h-64 object-cover"
                 />
-              ) : (
-                <span>{userName?.[0]?.toUpperCase() || "?"}</span>
-              )}
-            </div>
-
-            <div className="mt-8 text-center">
-              <p className="text-gray-400 text-sm">Welcome back</p>
-              <h1 className="text-green-400 text-2xl lg:text-3xl font-bold mt-1.5">
-                {userName}
-              </h1>
-              {userDescription && (
-                <p className="text-gray-400 text-sm mt-3 italic">
-                  ~ {userDescription}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-auto w-full max-w-xs">
-              <button
-                onClick={handleLogout}
-                className="w-full py-3 bg-red-600/90 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </aside>
-
-          {/* Upload Modal */}
-          {showImageUpload && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-              <div className="bg-gray-900 rounded-2xl p-6 md:p-8 w-full max-w-md border border-green-900/30 shadow-2xl">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-green-400 text-xl font-semibold">
-                    Change Profile Picture
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowImageUpload(false);
-                      setImageToUpload(null);
-                    }}
-                    className="text-3xl text-gray-400 hover:text-white"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {imageToUpload && (
-                  <div className="mb-6 rounded-xl overflow-hidden border border-green-800/40">
-                    <img
-                      src={URL.createObjectURL(imageToUpload)}
-                      alt="Preview"
-                      className="w-full h-56 object-cover"
-                    />
-                  </div>
-                )}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setImageToUpload(e.target.files?.[0] ?? null)
-                  }
-                  className="block w-full text-white file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-black hover:file:bg-green-700 cursor-pointer"
-                />
-
-                <button
-                  onClick={handleUpload}
-                  disabled={!imageToUpload}
-                  className="mt-6 w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:text-gray-400 text-black font-semibold rounded-lg transition-colors"
-                >
-                  Upload Picture
-                </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Large Profile Picture Modal */}
-          {largeProfileImg && (
-            <div
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageToUpload(e.target.files?.[0] ?? null)}
+              className="block w-full text-white file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-green-700 file:text-white hover:file:bg-green-800 cursor-pointer"
+            />
+
+            <button
+              onClick={() => {/* upload logic here */}}
+              disabled={!imageToUpload}
+              className="mt-6 w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:bg-green-900/50 disabled:text-gray-400 text-black font-semibold rounded-xl transition-colors"
+            >
+              Upload Picture
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Large profile view */}
+      {largeProfileImg && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-lg p-4"
+          onClick={() => setLargeProfileImg(null)}
+        >
+          <div className="relative max-w-5xl w-full">
+            <button
+              className="absolute -top-14 right-2 text-white text-6xl hover:text-green-400"
               onClick={() => setLargeProfileImg(null)}
             >
-              <div className="relative max-w-4xl w-full max-h-[90vh]">
-                <button
-                  className="absolute -top-12 right-2 text-white text-5xl hover:text-green-400 transition-colors"
-                  onClick={() => setLargeProfileImg(null)}
-                >
-                  ×
-                </button>
-                <img
-                  src={largeProfileImg}
-                  alt="User profile"
-                  className="w-full h-auto max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-green-800/40"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-          )}
-        </>
+              ×
+            </button>
+            <img
+              src={largeProfileImg}
+              alt="Profile"
+              className="w-full max-h-[88vh] object-contain rounded-2xl border border-green-800/50 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
