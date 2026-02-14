@@ -36,7 +36,7 @@ const ChatBoard = () => {
   }, [senderId]);
 
   // Load all users
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const res = await fetch(
         "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
@@ -47,7 +47,7 @@ const ChatBoard = () => {
     } catch (err) {
       console.error("Error loading users:", err);
     }
-  };
+  },[]);
 
   // Load messages for selected conversation
   const loadMessages = useCallback(async () => {
