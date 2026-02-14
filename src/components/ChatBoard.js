@@ -202,7 +202,8 @@ const ChatBoard = () => {
   // ─── Render ───────────────────────────────────────────────────
   return (
     <div className="h-screen w-screen bg-black flex flex-col md:flex-row overflow-hidden">
-      {/* Mobile Header */}
+     {senderId && 
+     <>
       <div className="md:hidden bg-gray-950 border-b border-green-900/40 px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => setShowMobileUserList(true)}
@@ -470,6 +471,7 @@ const ChatBoard = () => {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 };

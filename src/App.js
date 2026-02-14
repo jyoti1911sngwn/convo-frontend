@@ -38,7 +38,7 @@ function App() {
         {/* Protected route */}
         <Route
           path="/chatconvo"
-          element={isLoggedIn ? <ChatBoard /> : <Navigate to="/login" replace />}
+          element={<ChatBoard />}
         />
 
         {/* Catch-all → redirect to login or chat */}
