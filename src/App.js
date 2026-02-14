@@ -41,7 +41,15 @@ function App() {
             </>
           }
         />
-        {isLoggedIn && <Route path="/chatconvo" element={<ChatBoard />} />}
+        {isLoggedIn ? <Route path="/chatconvo" element={<ChatBoard />} /> : <Route
+          path="/login"
+          element={
+            <>
+              <AnimateBackground />
+              <LoginForm />
+            </>
+          }
+        />}
       </Routes>
     </div>
   );
