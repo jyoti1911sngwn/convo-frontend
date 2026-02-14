@@ -6,7 +6,7 @@ import { Route, Routes } from "react-router-dom";
 import SignupForm from "./components/SignupForm";
 
 function App() {
-  const isLoggedIn = localStorage.getItem("userId") !== null;
+  const isLoggedIn = localStorage.getItem("userId");
   return (
     <div className="h-screen w-screen relative bg-black">
       {/* <div className="absolute inset-0 overflow-hidden">
