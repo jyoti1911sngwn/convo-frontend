@@ -6,7 +6,7 @@ const ChatBoard = () => {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
+  const [isDelievered, setIsDelievered] = useState(false);
   const [recipients, setRecipients] = useState([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState(null);
 
@@ -107,6 +107,8 @@ const ChatBoard = () => {
 
     const onReceive = (msg) => {
       // msg now has real id, created_at, etc.
+      if (msg.senderId === senderId) setIsDelievered(true);
+
       if (
         msg.senderId === selectedRecipientId ||
         msg.recipientId === selectedRecipientId
@@ -438,6 +440,9 @@ const ChatBoard = () => {
                 `}
                   >
                     {msg.text}
+                    {isDelievered && msg.sender === "me" && (
+                      <span className="text-xs text-gray-400 ml-2">✓</span>
+                    )}
                   </div>
                 </div>
               ))}
