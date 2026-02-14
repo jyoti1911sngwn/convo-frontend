@@ -112,7 +112,7 @@ const LoginForm = () => {
 
         <p className="text-center text-sm text-gray-400">
           Don’t have an account?{" "}
-          <span className="text-green-400 hover:underline cursor-pointer" onClick={() => navigate("/chatconvo")}>
+          <span className="text-green-400 hover:underline cursor-pointer" onClick={() => navigate("/signup")}>
             Sign up
           </span>
         </p>
