@@ -691,7 +691,7 @@ useEffect(() => {
           <div className="relative max-w-4xl w-full">
             <button
               className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400"
-              onClick={(e) =>  setLargeProfileImg(null)}
+              onClick={(e) => {e.stopPropagation(); setLargeProfileImg(null)}}
             >
               ×
             </button>
