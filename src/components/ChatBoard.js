@@ -712,7 +712,7 @@ const ChatBoard = () => {
             className="relative max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            {/* <button
               className="absolute -top-12 p-2 right-4 text-white text-6xl hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full p-1"
               onClick={(e) => {
                 e.stopPropagation();
@@ -721,7 +721,7 @@ const ChatBoard = () => {
               aria-label="Close profile image"
             >
               ×
-            </button>
+            </button> */}
             <img
               src={largeProfileImg}
               alt="Large profile"
