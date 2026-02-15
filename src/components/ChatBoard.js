@@ -113,6 +113,7 @@ const ChatBoard = () => {
       fetchMyProfileImage();
     }
   }, [senderId, fetchAllUsers, fetchMyProfileImage]);
+
   const fetchMessages = useCallback(async () => {
     if (!selectedRecipientId || !senderId) return;
     try {
@@ -136,6 +137,7 @@ const ChatBoard = () => {
       console.error("Messages fetch error:", err);
     }
   }, [senderId, selectedRecipientId]);
+
   useEffect(() => {
     if (selectedRecipientId) fetchMessages();
   }, [selectedRecipientId, fetchMessages]);
@@ -160,40 +162,41 @@ const ChatBoard = () => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    const onReceive = (incoming) => {
-      console.log("SOCKET ← receiveMessage", {
-        id: incoming?.id,
-        senderId: incoming?.senderId,
-        recipientId: incoming?.recipientId,
-        text: incoming?.messageText || incoming?.message,
-        myId: senderId,
-        selected: selectedRecipientId,
+    const handleReceive = (incoming) => {
+      if (!incoming?.id) {
+        console.warn("Received message without id", incoming);
+        return;
+      }
+
+      console.log("SOCKET received:", {
+        id: incoming.id,
+        from: incoming.senderId,
+        to: incoming.recipientId,
+        text: incoming.messageText || incoming.message || "?",
+        isMine: incoming.senderId === senderId,
+        currentChat: selectedRecipientId,
       });
 
-      if (!incoming?.id) return;
-
-      // Our own message echo → just mark delivered
+      // ── Own message echo ───────────────
       if (incoming.senderId === senderId) {
-        console.log("Ignoring own echo");
+        console.log(`Own echo (id ${incoming.id}) → marking delivered`);
         setIsDelivered(true);
         return;
       }
 
       setMessages((prev) => {
-        const incomingId = String(incoming.id);
+        const incIdStr = String(incoming.id);
 
-        // Already have this message (from fetch or previous socket)
-        if (prev.some((m) => String(m.id) === incomingId)) {
-          console.log(`Duplicate skipped - id ${incomingId} already exists`);
+        if (prev.some((m) => String(m.id) === incIdStr)) {
+          console.log(`Already have msg ${incIdStr} → skipping`);
           return prev;
         }
 
-        // Only add if it's related to current chat
         if (
           incoming.senderId === selectedRecipientId ||
           incoming.recipientId === selectedRecipientId
         ) {
-          console.log(`Adding message from socket - id ${incomingId}`);
+          console.log(`Adding new msg from socket → id ${incIdStr}`);
           return [
             ...prev,
             {
@@ -204,14 +207,19 @@ const ChatBoard = () => {
           ];
         }
 
+        console.log(
+          `Message ${incIdStr} not related to current chat → ignored`,
+        );
         return prev;
       });
     };
 
-    socket.on("receiveMessage", onReceive);
+    socket.on("receiveMessage", handleReceive);
 
+    // Cleanup is important
     return () => {
-      socket.off("receiveMessage", onReceive);
+      console.log("Cleaning up receiveMessage listener");
+      socket.off("receiveMessage", handleReceive);
     };
   }, [selectedRecipientId, senderId]);
 
