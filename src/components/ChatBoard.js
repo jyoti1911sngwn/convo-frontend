@@ -686,7 +686,7 @@ useEffect(() => {
       {largeProfileImg && (
         <div
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/95 p-4"
-          onClick={() => setLargeProfileImg(null)}
+          onClick={(e) => {e.stopPropagation(); setLargeProfileImg(null)}}
         >
           <div className="relative max-w-4xl w-full">
             <button
