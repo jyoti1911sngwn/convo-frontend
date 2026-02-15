@@ -18,8 +18,6 @@ const ChatBoard = () => {
   const [uploadStatus, setUploadStatus] = useState("");
 
   const [showMobileUserList, setShowMobileUserList] = useState(true);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -187,41 +185,48 @@ const ChatBoard = () => {
   }, [messages]);
 
   // Improved mobile keyboard handling
-  useEffect(() => {
-    if (!isMobile) return;
+// Only this useEffect remains for keyboard handling
+useEffect(() => {
+  if (!isMobile) return;
 
-    const updateKeyboard = () => {
-      if (!window.visualViewport) return;
-      const visualHeight = window.visualViewport.height;
-      const diff = window.innerHeight - visualHeight;
+  const update = () => {
+    if (!window.visualViewport) return;
 
-      // Only apply when keyboard is likely visible
-      if (diff > 120) {
-        setKeyboardHeight(diff);
-        setTimeout(() => {
-          inputRef.current?.scrollIntoView?.({
-            behavior: "smooth",
-            block: "end",
-          });
-        }, 100);
-      } else {
-        setKeyboardHeight(0);
+    const vh = window.visualViewport.height;
+    const full = window.innerHeight;
+
+    if (full - vh > 100) {
+      const container = inputContainerRef.current;
+      if (container) {
+        container.style.position = 'fixed';
+        container.style.bottom = '0px';
       }
-    };
 
-    window.visualViewport.addEventListener("resize", updateKeyboard);
-    window.visualViewport.addEventListener("scroll", updateKeyboard);
-    window.addEventListener("resize", updateKeyboard);
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 120);
+    }
+  };
 
-    // Initial check
-    updateKeyboard();
+  window.visualViewport.addEventListener("resize", update);
+  window.visualViewport.addEventListener("scroll", update);
+  window.addEventListener("resize", update);
 
-    return () => {
-      window.visualViewport.removeEventListener("resize", updateKeyboard);
-      window.visualViewport.removeEventListener("scroll", updateKeyboard);
-      window.removeEventListener("resize", updateKeyboard);
-    };
-  }, [isMobile]);
+  const onFocus = () => setTimeout(update, 80);
+  const inputEl = inputRef.current;
+  if (inputEl) inputEl.addEventListener("focus", onFocus);
+
+  // Initial call
+  update();
+
+  return () => {
+    window.visualViewport.removeEventListener("resize", update);
+    window.visualViewport.removeEventListener("scroll", update);
+    window.removeEventListener("resize", update);
+    if (inputEl) inputEl.removeEventListener("focus", onFocus);
+  };
+}, [isMobile]);
 
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
@@ -275,6 +280,8 @@ const ChatBoard = () => {
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
+
+  // ...existing code...
 useEffect(() => {
   if (!isMobile) return;
 
@@ -309,15 +316,20 @@ useEffect(() => {
 
   // Focus events can help too
   const onFocus = () => setTimeout(update, 80);
-  inputRef.current?.addEventListener("focus", onFocus);
+
+  // Capture the current input element so cleanup removes listener from the same node
+  const inputEl = inputRef.current;
+  if (inputEl?.addEventListener) inputEl.addEventListener("focus", onFocus);
 
   return () => {
     window.visualViewport.removeEventListener("resize", update);
     window.visualViewport.removeEventListener("scroll", update);
     window.removeEventListener("resize", update);
-    inputRef.current?.removeEventListener("focus", onFocus);
+    if (inputEl?.removeEventListener) inputEl.removeEventListener("focus", onFocus);
   };
 }, [isMobile]);
+// ...existing code...
+
   // ─── Render Helpers ───────────────────────────────────────────
   const renderMessageInput = () => {
     if (!selectedRecipientId || selectedRecipientId === senderId) return null;
