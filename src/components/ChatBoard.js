@@ -43,7 +43,9 @@ const ChatBoard = () => {
   // ─── Fetch Functions ──────────────────────────────────────────
   const fetchAllUsers = useCallback(async () => {
     try {
-      const res = await fetch("https://convo-backend-6nfw.onrender.com/api/users/getAllUser");
+      const res = await fetch(
+        "https://convo-backend-6nfw.onrender.com/api/users/getAllUser",
+      );
       if (!res.ok) throw new Error("Failed to load users");
       setRecipients((await res.json()) || []);
     } catch (err) {
@@ -55,7 +57,7 @@ const ChatBoard = () => {
     if (!selectedRecipientId || !senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
       );
       if (!res.ok) throw new Error("Messages fetch failed");
       const data = await res.json();
@@ -64,7 +66,7 @@ const ChatBoard = () => {
           id: msg.id,
           text: msg.message,
           sender: msg.sender_id === senderId ? "me" : "other",
-        }))
+        })),
       );
     } catch (err) {
       console.error("Messages fetch error:", err);
@@ -75,7 +77,7 @@ const ChatBoard = () => {
     if (!senderId) return;
     try {
       const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`
+        `https://convo-backend-6nfw.onrender.com/api/images/getImage/${senderId}`,
       );
       if (res.status === 404 || !res.ok) return setYourImage("");
       const { imageUrl } = await res.json();
@@ -101,7 +103,7 @@ const ChatBoard = () => {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       if (!res.ok) {
@@ -197,7 +199,10 @@ const ChatBoard = () => {
       if (diff > 120) {
         setKeyboardHeight(diff);
         setTimeout(() => {
-          inputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
+          inputRef.current?.scrollIntoView?.({
+            behavior: "smooth",
+            block: "end",
+          });
         }, 100);
       } else {
         setKeyboardHeight(0);
@@ -221,13 +226,18 @@ const ChatBoard = () => {
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !selectedRecipientId || selectedRecipientId === senderId) return;
+    if (!text || !selectedRecipientId || selectedRecipientId === senderId)
+      return;
 
     const tempId = Date.now();
     setMessages((prev) => [...prev, { id: tempId, text, sender: "me" }]);
     setInput("");
 
-    const payload = { senderId, recipientId: selectedRecipientId, messageText: text };
+    const payload = {
+      senderId,
+      recipientId: selectedRecipientId,
+      messageText: text,
+    };
     socketRef.current?.emit("sendMessage", payload);
 
     try {
@@ -237,7 +247,7 @@ const ChatBoard = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!res.ok) {
@@ -247,7 +257,7 @@ const ChatBoard = () => {
 
       const saved = await res.json();
       setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, id: saved.id } : m))
+        prev.map((m) => (m.id === tempId ? { ...m, id: saved.id } : m)),
       );
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -261,11 +271,53 @@ const ChatBoard = () => {
 
   // ─── Filtered & Active ────────────────────────────────────────
   const filteredRecipients = recipients.filter((u) =>
-    u.username.toLowerCase().includes(debouncedSearch)
+    u.username.toLowerCase().includes(debouncedSearch),
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
+useEffect(() => {
+  if (!isMobile) return;
 
+  const update = () => {
+    if (!window.visualViewport) return;
+
+    const vh = window.visualViewport.height;
+    const full = window.innerHeight;
+
+    // Only apply when keyboard is probably visible
+    if (full - vh > 100) {           // threshold ~ keyboard height
+      // Use the **visible** height instead of adding padding
+      const container = inputContainerRef.current;
+      if (container) {
+        container.style.position = 'fixed';
+        container.style.bottom = '0px';
+        // Optional: force it to respect visual viewport
+        // Some people also do: container.style.height = `${vh}px`; but usually not needed
+      }
+
+      // Scroll message area or input into view
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 120);
+    }
+  };
+
+  window.visualViewport.addEventListener("resize", update);
+  window.visualViewport.addEventListener("scroll", update);
+  window.addEventListener("resize", update);
+
+  // Focus events can help too
+  const onFocus = () => setTimeout(update, 80);
+  inputRef.current?.addEventListener("focus", onFocus);
+
+  return () => {
+    window.visualViewport.removeEventListener("resize", update);
+    window.visualViewport.removeEventListener("scroll", update);
+    window.removeEventListener("resize", update);
+    inputRef.current?.removeEventListener("focus", onFocus);
+  };
+}, [isMobile]);
   // ─── Render Helpers ───────────────────────────────────────────
   const renderMessageInput = () => {
     if (!selectedRecipientId || selectedRecipientId === senderId) return null;
@@ -281,7 +333,7 @@ const ChatBoard = () => {
           isMobile
             ? {
                 bottom: 0,
-                paddingBottom: `${Math.max(keyboardHeight + 8, 16)}px`,
+                // paddingBottom: `${Math.max(keyboardHeight + 8, 16)}px`,
                 transition: "padding-bottom 0.25s ease-out",
               }
             : {}
@@ -320,7 +372,9 @@ const ChatBoard = () => {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
         <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md border border-green-900/50 shadow-2xl">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="text-green-400 text-xl font-semibold">Change Profile Picture</h2>
+            <h2 className="text-green-400 text-xl font-semibold">
+              Change Profile Picture
+            </h2>
             <button
               onClick={() => {
                 setShowImageUpload(false);
@@ -365,8 +419,8 @@ const ChatBoard = () => {
               uploadStatus.includes("success")
                 ? "bg-green-700 text-white"
                 : uploadStatus.includes("failed")
-                ? "bg-red-700 text-white"
-                : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black shadow-md"
+                  ? "bg-red-700 text-white"
+                  : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-black shadow-md"
             }`}
           >
             {uploadStatus || "Upload Picture"}
@@ -375,7 +429,9 @@ const ChatBoard = () => {
           {uploadStatus && (
             <p
               className={`mt-3 text-center text-sm font-medium ${
-                uploadStatus.includes("success") ? "text-green-400" : "text-red-400"
+                uploadStatus.includes("success")
+                  ? "text-green-400"
+                  : "text-red-400"
               }`}
             >
               {uploadStatus}
@@ -403,14 +459,20 @@ const ChatBoard = () => {
             <>
               <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-600/60">
                 {activeUser.image ? (
-                  <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={activeUser.image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold">
                     {activeUser.username?.[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
-              <h2 className="text-green-200 font-semibold truncate">{activeUser.username}</h2>
+              <h2 className="text-green-200 font-semibold truncate">
+                {activeUser.username}
+              </h2>
             </>
           ) : (
             <h2 className="text-gray-400 font-medium">CONVO</h2>
@@ -422,7 +484,11 @@ const ChatBoard = () => {
           onClick={() => setShowImageUpload(true)}
         >
           {yourImage ? (
-            <img src={yourImage} alt="You" className="h-full w-full object-cover" />
+            <img
+              src={yourImage}
+              alt="You"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold">
               {userName?.[0]?.toUpperCase() || "?"}
@@ -466,7 +532,9 @@ const ChatBoard = () => {
                 key={user.id}
                 onClick={() => selectUser(user.id)}
                 className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${
-                  selectedRecipientId === user.id ? "bg-green-900/20" : "hover:bg-gray-800/70"
+                  selectedRecipientId === user.id
+                    ? "bg-green-900/20"
+                    : "hover:bg-gray-800/70"
                 }`}
               >
                 <div
@@ -477,7 +545,11 @@ const ChatBoard = () => {
                   }}
                 >
                   {user.image ? (
-                    <img src={user.image} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={user.image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold text-lg">
                       {user.username?.slice(0, 2).toUpperCase()}
@@ -485,7 +557,9 @@ const ChatBoard = () => {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{user.username}</p>
+                  <p className="text-white font-medium truncate">
+                    {user.username}
+                  </p>
                   <p className="text-xs text-gray-400 truncate mt-0.5">
                     {user.message || "Start chatting"}
                   </p>
@@ -521,7 +595,11 @@ const ChatBoard = () => {
               <>
                 <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-green-600/60">
                   {activeUser.image ? (
-                    <img src={activeUser.image} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={activeUser.image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-green-800 flex items-center justify-center text-white font-bold">
                       {activeUser.username?.[0]?.toUpperCase()}
@@ -529,7 +607,9 @@ const ChatBoard = () => {
                   )}
                 </div>
                 <div>
-                  <h2 className="text-green-200 font-semibold">{activeUser.username}</h2>
+                  <h2 className="text-green-200 font-semibold">
+                    {activeUser.username}
+                  </h2>
                   <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
                     <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                     Online
@@ -539,38 +619,44 @@ const ChatBoard = () => {
             )}
           </header>
 
-          <main className="flex-1 p-4 sm:p-6 overflow-y-auto bg-gradient-to-b from-black to-gray-950">
-            <AnimateBackground />
-            {!selectedRecipientId ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center">
-                <div className="text-6xl mb-6">💬</div>
-                <h3 className="text-xl text-gray-300 mb-3">Welcome to CONVO</h3>
-                <p>Select a user to start chatting</p>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                No messages yet. Say hello! 👋
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex mb-5 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                >
+          <main className="flex-1 p-4 sm:p-6 overflow-y-auto relative bg-transparent">
+            <div className="absolute inset-0 pointer-events-none z-0">
+              <AnimateBackground />
+            </div>
+            <div className="relative z-10 min-h-full flex flex-col">
+              {!selectedRecipientId ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center">
+                  <div className="text-6xl mb-6">💬</div>
+                  <h3 className="text-xl text-gray-300 mb-3">
+                    Welcome to CONVO
+                  </h3>
+                  <p>Select a user to start chatting</p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  No messages yet. Say hello! 👋
+                </div>
+              ) : (
+                messages.map((msg) => (
                   <div
-                    className={`
+                    key={msg.id}
+                    className={`flex mb-5 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`
                       max-w-[80%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm
                       ${msg.sender === "me" ? "bg-green-600 text-black rounded-br-none" : "bg-gray-800 text-white rounded-bl-none"}
                     `}
-                  >
-                    {msg.text}
-                    {msg.sender === "me" && isDelivered && (
-                      <span className="text-xs text-gray-300/80 ml-2">✓</span>
-                    )}
+                    >
+                      {msg.text}
+                      {msg.sender === "me" && isDelivered && (
+                        <span className="text-xs text-gray-300/80 ml-2">✓</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
             <div ref={messagesEndRef} />
           </main>
 
