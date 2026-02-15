@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
+import AnimateBackground from "./AnimateBackground";
 
 const ChatBoard = () => {
   const [messages, setMessages] = useState([]);
@@ -539,6 +540,7 @@ const ChatBoard = () => {
           </header>
 
           <main className="flex-1 p-4 sm:p-6 overflow-y-auto bg-gradient-to-b from-black to-gray-950">
+            <AnimateBackground />
             {!selectedRecipientId ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center">
                 <div className="text-6xl mb-6">💬</div>
