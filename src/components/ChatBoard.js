@@ -29,10 +29,18 @@ const ChatBoard = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   // ─── Socket Connection ────────────────────────────────────────
-  useEffect(() => {
-    socketRef.current = io("https://convo-backend-6nfw.onrender.com");
-    return () => socketRef.current?.disconnect();
-  }, []);
+useEffect(() => {
+  if (socketRef.current) return; // ← prevent double connection
+
+  console.log("Creating socket...");
+  socketRef.current = io("https://convo-backend-6nfw.onrender.com");
+
+  return () => {
+    console.log("Cleaning up socket");
+    socketRef.current?.disconnect();
+    socketRef.current = null;
+  };
+}, []);
 
   useEffect(() => {
     if (senderId) socketRef.current?.emit("join", senderId);
