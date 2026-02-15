@@ -188,6 +188,18 @@ const ChatBoard = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!largeProfileImg) return;
+
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setLargeProfileImg(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [largeProfileImg]);
   // Improved mobile keyboard handling
   // Only this useEffect remains for keyboard handling
   useEffect(() => {
@@ -693,23 +705,27 @@ const ChatBoard = () => {
       {/* Large profile view */}
       {largeProfileImg && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/95 p-4"
-          onClick={(e) => setLargeProfileImg(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
+          onClick={() => setLargeProfileImg(null)}
         >
-          <div className="relative max-w-4xl w-full">
+          <div
+            className="relative max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400"
+              className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full p-1"
               onClick={(e) => {
-                e.stopPropagation(); // ← Prevents overlay onClick from firing
+                e.stopPropagation();
                 setLargeProfileImg(null);
               }}
+              aria-label="Close profile image"
             >
               ×
             </button>
             <img
               src={largeProfileImg}
-              alt="Profile"
-              className="w-full z-60 max-h-[85vh] object-contain rounded-2xl border border-green-800/40 shadow-2xl"
+              alt="Large profile"
+              className="w-full max-h-[85vh] object-contain rounded-2xl border border-green-800/40 shadow-2xl"
             />
           </div>
         </div>
