@@ -29,18 +29,10 @@ const ChatBoard = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   // ─── Socket Connection ────────────────────────────────────────
-useEffect(() => {
-  if (socketRef.current) return; // ← prevent double connection
-
-  console.log("Creating socket...");
-  socketRef.current = io("https://convo-backend-6nfw.onrender.com");
-
-  return () => {
-    console.log("Cleaning up socket");
-    socketRef.current?.disconnect();
-    socketRef.current = null;
-  };
-}, []);
+  useEffect(() => {
+    socketRef.current = io("https://convo-backend-6nfw.onrender.com");
+    return () => socketRef.current?.disconnect();
+  }, []);
 
   useEffect(() => {
     if (senderId) socketRef.current?.emit("join", senderId);
@@ -166,27 +158,26 @@ useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    const onReceive = (msg) => {
-      if (msg.senderId === senderId) {
-        // This is our own message coming back → ignore it
-        setIsDelivered(true);
-        return;
-      }
+const onReceive = (msg) => {
+  // Ignore our own messages completely
+  if (msg.senderId === senderId) {
+    setIsDelivered(true);
+    return;
+  }
 
-      if (
-        msg.senderId === selectedRecipientId ||
-        msg.recipientId === selectedRecipientId
-      ) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: msg.id,
-            text: msg.messageText,
-            sender: msg.senderId === senderId ? "me" : "other",
-          },
-        ]);
-      }
-    };
+  // Only add if it's really from the current conversation
+  if (msg.senderId !== selectedRecipientId) return;
+
+  setMessages((prev) => {
+    // Prevent duplicate by ID if you have real IDs
+    if (prev.some(m => m.id === msg.id)) return prev;
+    return [...prev, {
+      id: msg.id,
+      text: msg.messageText,
+      sender: "other",
+    }];
+  });
+};
 
     socket.on("receiveMessage", onReceive);
     return () => socket.off("receiveMessage", onReceive);
