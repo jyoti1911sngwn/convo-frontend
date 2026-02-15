@@ -51,26 +51,6 @@ const ChatBoard = () => {
     }
   }, []);
 
-  const fetchMessages = useCallback(async () => {
-    if (!selectedRecipientId || !senderId) return;
-    try {
-      const res = await fetch(
-        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
-      );
-      if (!res.ok) throw new Error("Messages fetch failed");
-      const data = await res.json();
-      setMessages(
-        data.map((msg) => ({
-          id: msg.id,
-          text: msg.message,
-          sender: msg.sender_id === senderId ? "me" : "other",
-        })),
-      );
-    } catch (err) {
-      console.error("Messages fetch error:", err);
-    }
-  }, [senderId, selectedRecipientId]);
-
   const fetchMyProfileImage = useCallback(async () => {
     if (!senderId) return;
     try {
@@ -133,7 +113,29 @@ const ChatBoard = () => {
       fetchMyProfileImage();
     }
   }, [senderId, fetchAllUsers, fetchMyProfileImage]);
+  const fetchMessages = useCallback(async () => {
+    if (!selectedRecipientId || !senderId) return;
+    try {
+      const res = await fetch(
+        `https://convo-backend-6nfw.onrender.com/api/messages/getMessages/${senderId}/${selectedRecipientId}`,
+      );
+      if (!res.ok) throw new Error("Messages fetch failed");
+      const data = await res.json();
 
+      const normalized = data.map((msg) => ({
+        id: msg.id,
+        text: msg.message || msg.messageText || "",
+        sender:
+          msg.sender_id === senderId || msg.senderId === senderId
+            ? "me"
+            : "other",
+      }));
+
+      setMessages(normalized);
+    } catch (err) {
+      console.error("Messages fetch error:", err);
+    }
+  }, [senderId, selectedRecipientId]);
   useEffect(() => {
     if (selectedRecipientId) fetchMessages();
   }, [selectedRecipientId, fetchMessages]);
@@ -154,44 +156,64 @@ const ChatBoard = () => {
   }, [recipients, selectedRecipientId, isMobile]);
 
   // Real-time messages
-useEffect(() => {
-  const socket = socketRef.current;
-  if (!socket) return;
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
-const onReceive = (msg) => {
-  // Ignore our own echoed message
-  if (msg.senderId === senderId) {
-    setIsDelivered(true);
-    return;
-  }
+    const onReceive = (incoming) => {
+      console.log("SOCKET ← receiveMessage", {
+        id: incoming?.id,
+        senderId: incoming?.senderId,
+        recipientId: incoming?.recipientId,
+        text: incoming?.messageText || incoming?.message,
+        myId: senderId,
+        selected: selectedRecipientId,
+      });
 
-  setMessages((prev) => {
-    // Prevent adding the same message twice
-    if (prev.some((m) => m.id === msg.id)) {
-      return prev;
-    }
+      if (!incoming?.id) return;
 
-    if (
-      msg.senderId === selectedRecipientId ||
-      msg.recipientId === selectedRecipientId
-    ) {
-      return [
-        ...prev,
-        {
-          id: msg.id,
-          text: msg.messageText,
-          sender: msg.senderId === senderId ? "me" : "other",
-        },
-      ];
-    }
+      // Our own message echo → just mark delivered
+      if (incoming.senderId === senderId) {
+        console.log("Ignoring own echo");
+        setIsDelivered(true);
+        return;
+      }
 
-    return prev;
-  });
-};
+      setMessages((prev) => {
+        const incomingId = String(incoming.id);
 
-  socket.on("receiveMessage", onReceive);
-  return () => socket.off("receiveMessage", onReceive);
-}, [selectedRecipientId, senderId]);
+        // Already have this message (from fetch or previous socket)
+        if (prev.some((m) => String(m.id) === incomingId)) {
+          console.log(`Duplicate skipped - id ${incomingId} already exists`);
+          return prev;
+        }
+
+        // Only add if it's related to current chat
+        if (
+          incoming.senderId === selectedRecipientId ||
+          incoming.recipientId === selectedRecipientId
+        ) {
+          console.log(`Adding message from socket - id ${incomingId}`);
+          return [
+            ...prev,
+            {
+              id: incoming.id,
+              text: incoming.messageText || incoming.message || "",
+              sender: incoming.senderId === senderId ? "me" : "other",
+            },
+          ];
+        }
+
+        return prev;
+      });
+    };
+
+    socket.on("receiveMessage", onReceive);
+
+    return () => {
+      socket.off("receiveMessage", onReceive);
+    };
+  }, [selectedRecipientId, senderId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
