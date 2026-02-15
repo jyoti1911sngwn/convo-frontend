@@ -158,70 +158,67 @@ const ChatBoard = () => {
   }, [recipients, selectedRecipientId, isMobile]);
 
   // Real-time messages
-  useEffect(() => {
-    const socket = socketRef.current;
-    if (!socket) return;
+useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket) return;
 
-    const handleReceive = (incoming) => {
-      if (!incoming?.id) {
-        console.warn("Received message without id", incoming);
-        return;
-      }
+  const handleReceive = (incoming) => {
+    if (!incoming?.id) {
+      console.warn("Invalid message (no id)", incoming);
+      return;
+    }
 
-      console.log("SOCKET received:", {
-        id: incoming.id,
-        from: incoming.senderId,
-        to: incoming.recipientId,
-        text: incoming.messageText || incoming.message || "?",
-        isMine: incoming.senderId === senderId,
-        currentChat: selectedRecipientId,
-      });
+    const incId = String(incoming.id); // force string
 
-      // ── Own message echo ───────────────
-      if (incoming.senderId === senderId) {
-        console.log(`Own echo (id ${incoming.id}) → marking delivered`);
-        setIsDelivered(true);
-        return;
-      }
+    console.log("SOCKET ←", {
+      id: incId,
+      from: incoming.senderId,
+      to: incoming.recipientId,
+      text: incoming.messageText || incoming.message || "???",
+      isOwn: incoming.senderId === senderId,
+    });
 
-      setMessages((prev) => {
-        const incIdStr = String(incoming.id);
+    if (incoming.senderId === senderId) {
+      console.log(`Own message echo (id ${incId})`);
+      setIsDelivered(true);
+      // Bonus: you could replace optimistic temp message here if you tracked tempId
+      return;
+    }
 
-        if (prev.some((m) => String(m.id) === incIdStr)) {
-          console.log(`Already have msg ${incIdStr} → skipping`);
-          return prev;
-        }
-
-        if (
-          incoming.senderId === selectedRecipientId ||
-          incoming.recipientId === selectedRecipientId
-        ) {
-          console.log(`Adding new msg from socket → id ${incIdStr}`);
-          return [
-            ...prev,
-            {
-              id: incoming.id,
-              text: incoming.messageText || incoming.message || "",
-              sender: incoming.senderId === senderId ? "me" : "other",
-            },
-          ];
-        }
-
-        console.log(
-          `Message ${incIdStr} not related to current chat → ignored`,
-        );
+    setMessages((prev) => {
+      // Check by string id
+      if (prev.some((m) => String(m.id) === incId)) {
+        console.log(`Skipped duplicate - already have id ${incId}`);
         return prev;
-      });
-    };
+      }
 
-    socket.on("receiveMessage", handleReceive);
+      if (
+        String(incoming.senderId) === String(selectedRecipientId) ||
+        String(incoming.recipientId) === String(selectedRecipientId)
+      ) {
+        console.log(`→ Adding from socket id ${incId}`);
+        return [
+          ...prev,
+          {
+            id: incoming.id, // keep original type if you want
+            text: incoming.messageText || incoming.message || "",
+            sender: String(incoming.senderId) === String(senderId) ? "me" : "other",
+          },
+        ];
+      }
 
-    // Cleanup is important
-    return () => {
-      console.log("Cleaning up receiveMessage listener");
-      socket.off("receiveMessage", handleReceive);
-    };
-  }, [selectedRecipientId, senderId]);
+      console.log(`Ignored - not for current chat (id ${incId})`);
+      return prev;
+    });
+  };
+
+  socket.on("receiveMessage", handleReceive);
+
+  return () => {
+    console.log("→ Removing receiveMessage listener");
+    socket.off("receiveMessage", handleReceive);
+  };
+}, [selectedRecipientId, senderId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
