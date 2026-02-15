@@ -159,7 +159,11 @@ const ChatBoard = () => {
     if (!socket) return;
 
     const onReceive = (msg) => {
-      if (msg.senderId === senderId) setIsDelivered(true);
+      if (msg.senderId === senderId) {
+      // This is our own message coming back → ignore it
+      setIsDelivered(true);
+      return;
+    }
 
       if (
         msg.senderId === selectedRecipientId ||
