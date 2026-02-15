@@ -604,7 +604,7 @@ const ChatBoard = () => {
             ))}
           </div>
 
-          <div className="md:hidden p-4 border-t border-green-900/50">
+          <div className="p-4 border-t border-green-900/50">
             <button
               onClick={() => {
                 localStorage.clear();
@@ -712,16 +712,7 @@ const ChatBoard = () => {
             className="relative max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* <button
-              className="absolute -top-12 p-2 right-4 text-white text-6xl hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full p-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLargeProfileImg(null);
-              }}
-              aria-label="Close profile image"
-            >
-              ×
-            </button> */}
+          
             <img
               src={largeProfileImg}
               alt="Large profile"
