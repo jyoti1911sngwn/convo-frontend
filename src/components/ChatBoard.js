@@ -713,7 +713,7 @@ const ChatBoard = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full p-1"
+              className="absolute -top-12 p-2 right-4 text-white text-6xl hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full p-1"
               onClick={(e) => {
                 e.stopPropagation();
                 setLargeProfileImg(null);
