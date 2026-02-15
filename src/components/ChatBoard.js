@@ -300,28 +300,28 @@ useEffect(() => {
     };
     socketRef.current?.emit("sendMessage", payload);
 
-    try {
-      const res = await fetch(
-        "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+    // try {
+    //   const res = await fetch(
+    //     "https://convo-backend-6nfw.onrender.com/api/messages/createMessage",
+    //     {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify(payload),
+    //     },
+    //   );
 
-      if (!res.ok) {
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        return;
-      }
+    //   if (!res.ok) {
+    //     setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    //     return;
+    //   }
 
-      const saved = await res.json();
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, id: saved.id } : m)),
-      );
-    } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-    }
+    //   const saved = await res.json();
+    //   setMessages((prev) =>
+    //     prev.map((m) => (m.id === tempId ? { ...m, id: saved.id } : m)),
+    //   );
+    // } catch {
+    //   setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    // }
   };
 
   const selectUser = (id) => {
