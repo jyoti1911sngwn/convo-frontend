@@ -690,7 +690,7 @@ useEffect(() => {
         >
           <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
             <button
-              className="absolute -top-12 right-4 text-white z-60 text-6xl hover:text-green-400"
+              className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400"
               onClick={() => setLargeProfileImg(null)}
             >
               ×
@@ -698,7 +698,7 @@ useEffect(() => {
             <img
               src={largeProfileImg}
               alt="Profile"
-              className="w-full max-h-[85vh] object-contain rounded-2xl border border-green-800/40 shadow-2xl"
+              className="w-full  z-60 max-h-[85vh] object-contain rounded-2xl border border-green-800/40 shadow-2xl"
             />
           </div>
         </div>
