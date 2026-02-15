@@ -275,7 +275,49 @@ const ChatBoard = () => {
   );
 
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
+useEffect(() => {
+  if (!isMobile) return;
 
+  const update = () => {
+    if (!window.visualViewport) return;
+
+    const vh = window.visualViewport.height;
+    const full = window.innerHeight;
+
+    // Only apply when keyboard is probably visible
+    if (full - vh > 100) {           // threshold ~ keyboard height
+      // Use the **visible** height instead of adding padding
+      const container = inputContainerRef.current;
+      if (container) {
+        container.style.position = 'fixed';
+        container.style.bottom = '0px';
+        // Optional: force it to respect visual viewport
+        // Some people also do: container.style.height = `${vh}px`; but usually not needed
+      }
+
+      // Scroll message area or input into view
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 120);
+    }
+  };
+
+  window.visualViewport.addEventListener("resize", update);
+  window.visualViewport.addEventListener("scroll", update);
+  window.addEventListener("resize", update);
+
+  // Focus events can help too
+  const onFocus = () => setTimeout(update, 80);
+  inputRef.current?.addEventListener("focus", onFocus);
+
+  return () => {
+    window.visualViewport.removeEventListener("resize", update);
+    window.visualViewport.removeEventListener("scroll", update);
+    window.removeEventListener("resize", update);
+    inputRef.current?.removeEventListener("focus", onFocus);
+  };
+}, [isMobile]);
   // ─── Render Helpers ───────────────────────────────────────────
   const renderMessageInput = () => {
     if (!selectedRecipientId || selectedRecipientId === senderId) return null;
@@ -291,7 +333,7 @@ const ChatBoard = () => {
           isMobile
             ? {
                 bottom: 0,
-                paddingBottom: `${Math.max(keyboardHeight + 8, 16)}px`,
+                // paddingBottom: `${Math.max(keyboardHeight + 8, 16)}px`,
                 transition: "padding-bottom 0.25s ease-out",
               }
             : {}
