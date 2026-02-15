@@ -160,10 +160,10 @@ const ChatBoard = () => {
 
     const onReceive = (msg) => {
       if (msg.senderId === senderId) {
-      // This is our own message coming back → ignore it
-      setIsDelivered(true);
-      return;
-    }
+        // This is our own message coming back → ignore it
+        setIsDelivered(true);
+        return;
+      }
 
       if (
         msg.senderId === selectedRecipientId ||
@@ -189,48 +189,51 @@ const ChatBoard = () => {
   }, [messages]);
 
   // Improved mobile keyboard handling
-// Only this useEffect remains for keyboard handling
-useEffect(() => {
-  if (!isMobile) return;
+  // Only this useEffect remains for keyboard handling
+  useEffect(() => {
+    if (!isMobile) return;
 
-  const update = () => {
-    if (!window.visualViewport) return;
+    const update = () => {
+      if (!window.visualViewport) return;
 
-    const vh = window.visualViewport.height;
-    const full = window.innerHeight;
+      const vh = window.visualViewport.height;
+      const full = window.innerHeight;
 
-    if (full - vh > 100) {
-      const container = inputContainerRef.current;
-      if (container) {
-        container.style.position = 'fixed';
-        container.style.bottom = '0px';
+      if (full - vh > 100) {
+        const container = inputContainerRef.current;
+        if (container) {
+          container.style.position = "fixed";
+          container.style.bottom = "0px";
+        }
+
+        setTimeout(() => {
+          inputRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 120);
       }
+    };
 
-      setTimeout(() => {
-        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 120);
-    }
-  };
+    window.visualViewport.addEventListener("resize", update);
+    window.visualViewport.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
 
-  window.visualViewport.addEventListener("resize", update);
-  window.visualViewport.addEventListener("scroll", update);
-  window.addEventListener("resize", update);
+    const onFocus = () => setTimeout(update, 80);
+    const inputEl = inputRef.current;
+    if (inputEl) inputEl.addEventListener("focus", onFocus);
 
-  const onFocus = () => setTimeout(update, 80);
-  const inputEl = inputRef.current;
-  if (inputEl) inputEl.addEventListener("focus", onFocus);
+    // Initial call
+    update();
 
-  // Initial call
-  update();
-
-  return () => {
-    window.visualViewport.removeEventListener("resize", update);
-    window.visualViewport.removeEventListener("scroll", update);
-    window.removeEventListener("resize", update);
-    if (inputEl) inputEl.removeEventListener("focus", onFocus);
-  };
-}, [isMobile]);
+    return () => {
+      window.visualViewport.removeEventListener("resize", update);
+      window.visualViewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      if (inputEl) inputEl.removeEventListener("focus", onFocus);
+    };
+  }, [isMobile]);
 
   // ─── Handlers ─────────────────────────────────────────────────
   const sendMessage = async () => {
@@ -286,53 +289,58 @@ useEffect(() => {
   const activeUser = recipients.find((u) => u.id === selectedRecipientId);
 
   // ...existing code...
-useEffect(() => {
-  if (!isMobile) return;
+  useEffect(() => {
+    if (!isMobile) return;
 
-  const update = () => {
-    if (!window.visualViewport) return;
+    const update = () => {
+      if (!window.visualViewport) return;
 
-    const vh = window.visualViewport.height;
-    const full = window.innerHeight;
+      const vh = window.visualViewport.height;
+      const full = window.innerHeight;
 
-    // Only apply when keyboard is probably visible
-    if (full - vh > 100) {           // threshold ~ keyboard height
-      // Use the **visible** height instead of adding padding
-      const container = inputContainerRef.current;
-      if (container) {
-        container.style.position = 'fixed';
-        container.style.bottom = '0px';
-        // Optional: force it to respect visual viewport
-        // Some people also do: container.style.height = `${vh}px`; but usually not needed
+      // Only apply when keyboard is probably visible
+      if (full - vh > 100) {
+        // threshold ~ keyboard height
+        // Use the **visible** height instead of adding padding
+        const container = inputContainerRef.current;
+        if (container) {
+          container.style.position = "fixed";
+          container.style.bottom = "0px";
+          // Optional: force it to respect visual viewport
+          // Some people also do: container.style.height = `${vh}px`; but usually not needed
+        }
+
+        // Scroll message area or input into view
+        setTimeout(() => {
+          inputRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 120);
       }
+    };
 
-      // Scroll message area or input into view
-      setTimeout(() => {
-        inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 120);
-    }
-  };
+    window.visualViewport.addEventListener("resize", update);
+    window.visualViewport.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
 
-  window.visualViewport.addEventListener("resize", update);
-  window.visualViewport.addEventListener("scroll", update);
-  window.addEventListener("resize", update);
+    // Focus events can help too
+    const onFocus = () => setTimeout(update, 80);
 
-  // Focus events can help too
-  const onFocus = () => setTimeout(update, 80);
+    // Capture the current input element so cleanup removes listener from the same node
+    const inputEl = inputRef.current;
+    if (inputEl?.addEventListener) inputEl.addEventListener("focus", onFocus);
 
-  // Capture the current input element so cleanup removes listener from the same node
-  const inputEl = inputRef.current;
-  if (inputEl?.addEventListener) inputEl.addEventListener("focus", onFocus);
-
-  return () => {
-    window.visualViewport.removeEventListener("resize", update);
-    window.visualViewport.removeEventListener("scroll", update);
-    window.removeEventListener("resize", update);
-    if (inputEl?.removeEventListener) inputEl.removeEventListener("focus", onFocus);
-  };
-}, [isMobile]);
-// ...existing code...
+    return () => {
+      window.visualViewport.removeEventListener("resize", update);
+      window.visualViewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      if (inputEl?.removeEventListener)
+        inputEl.removeEventListener("focus", onFocus);
+    };
+  }, [isMobile]);
+  // ...existing code...
 
   // ─── Render Helpers ───────────────────────────────────────────
   const renderMessageInput = () => {
@@ -691,7 +699,10 @@ useEffect(() => {
           <div className="relative max-w-4xl w-full">
             <button
               className="absolute -top-12 right-4 text-white text-6xl hover:text-green-400"
-              onClick={() => setLargeProfileImg(null)}
+              onClick={(e) => {
+                e.stopPropagation(); // ← Prevents overlay onClick from firing
+                setLargeProfileImg(null);
+              }}
             >
               ×
             </button>
