@@ -543,6 +543,36 @@ const ChatBoard = () => {
             flex flex-col
           `}
         >
+          <div className="p-4 border-b border-green-900/50 bg-gradient-to-b from-green-950/30 to-transparent">
+            <div className="flex items-center gap-3">
+              <div
+                className="h-14 w-14 rounded-full overflow-hidden border-2 border-green-600/70 shadow-lg cursor-pointer flex-shrink-0"
+                onClick={() => setShowImageUpload(true)}
+              >
+                {yourImage ? (
+                  <img
+                    src={yourImage}
+                    alt="Your profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-green-900 flex items-center justify-center text-white font-bold text-xl">
+                    {userName?.[0]?.toUpperCase() || "?"}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-white font-semibold truncate">{userName}</p>
+                <p className="text-xs text-green-400/80">You</p>
+              </div>
+            </div>
+
+            {/* Optional: small upload hint on hover (desktop) */}
+            <p className="hidden md:block text-xs text-gray-500 mt-2 italic">
+              Click your picture to change it
+            </p>
+          </div>
           <div className="md:hidden p-4 border-b border-green-900/50 flex justify-between items-center">
             <h1 className="text-green-400 text-2xl font-bold">CONVO</h1>
             <button
@@ -712,7 +742,6 @@ const ChatBoard = () => {
             className="relative max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-          
             <img
               src={largeProfileImg}
               alt="Large profile"
