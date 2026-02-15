@@ -482,7 +482,7 @@ const ChatBoard = () => {
   return (
     <div className="h-dvh w-screen bg-black flex flex-col overflow-hidden">
       {/* Mobile header */}
-      <div className=" bg-gray-950 border-b border-green-900/60 px-4 py-3 flex items-center justify-between z-20">
+      <div className="md:hidden bg-gray-950 border-b border-green-900/60 px-4 py-3 flex items-center justify-between z-20">
         <button
           onClick={() => setShowMobileUserList(true)}
           className="text-green-400 text-2xl md:hidden"
