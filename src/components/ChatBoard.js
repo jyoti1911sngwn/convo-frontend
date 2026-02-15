@@ -154,34 +154,44 @@ const ChatBoard = () => {
   }, [recipients, selectedRecipientId, isMobile]);
 
   // Real-time messages
-  useEffect(() => {
-    const socket = socketRef.current;
-    if (!socket) return;
+useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket) return;
 
 const onReceive = (msg) => {
-  // Ignore our own messages completely
+  // Ignore our own echoed message
   if (msg.senderId === senderId) {
     setIsDelivered(true);
     return;
   }
 
-  // Only add if it's really from the current conversation
-  if (msg.senderId !== selectedRecipientId) return;
-
   setMessages((prev) => {
-    // Prevent duplicate by ID if you have real IDs
-    if (prev.some(m => m.id === msg.id)) return prev;
-    return [...prev, {
-      id: msg.id,
-      text: msg.messageText,
-      sender: "other",
-    }];
+    // Prevent adding the same message twice
+    if (prev.some((m) => m.id === msg.id)) {
+      return prev;
+    }
+
+    if (
+      msg.senderId === selectedRecipientId ||
+      msg.recipientId === selectedRecipientId
+    ) {
+      return [
+        ...prev,
+        {
+          id: msg.id,
+          text: msg.messageText,
+          sender: msg.senderId === senderId ? "me" : "other",
+        },
+      ];
+    }
+
+    return prev;
   });
 };
 
-    socket.on("receiveMessage", onReceive);
-    return () => socket.off("receiveMessage", onReceive);
-  }, [selectedRecipientId, senderId]);
+  socket.on("receiveMessage", onReceive);
+  return () => socket.off("receiveMessage", onReceive);
+}, [selectedRecipientId, senderId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
